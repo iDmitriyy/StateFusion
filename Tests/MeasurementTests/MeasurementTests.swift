@@ -22,7 +22,7 @@ struct PlaygroundTests {
   let outer: Int = 1000
   let inner: Int = 1000
   
-  @Test func `PublishedState withLockAccess StateAndData`() {
+  @Test func `PublishedState withLockAccess RichState`() {
     if #available(macOS 26.0, *) {
       let richState = RichState(state: 0, data: DataState_Example())
       let publishedState = PublishedState(richState)
@@ -52,7 +52,7 @@ struct PlaygroundTests {
       }
       
       print("___", withLockAccess, withLockMutableAccessRead, withLockMutableAccessWrite)
-      // ___ 93.79740600000001 165.02267700000002 440.28336900000005
+      // 
     }
   }
   

@@ -42,58 +42,6 @@ public enum StateAndDataEmissionReason: Equatable, Sendable {
 
 // MARK: - AccessHandle
 
-//public struct RichStateAccessHandle<EnumerableState, DataState: ~Copyable>: ~Copyable, ~Escapable {
-//  public var state: EnumerableState {
-//    yielding borrow {
-//      yield _pointer.pointee.state
-//    }
-//    yielding mutate {
-//      isEnumerableStateMutablyAccessed = true // FIXME: - check for correctness doing it such way
-//      yield &_pointer.pointee.state
-//    }
-//  }
-//  
-//  public var data: DataState {
-//    yielding borrow {
-//      yield _pointer.pointee.data
-//    }
-//    yielding mutate {
-//      isDataStateMutablyAccessed = true
-//      yield &_pointer.pointee.data
-//    }
-//  }
-//
-//  // We can only observe that storage is mutably accessed, but not prove changing really happened.
-//  // e.g. someone can write $0.data.searchText = $0.data.searchText – the data is mutated, but it stay the same.
-//  // Such cases are not expected in real cases though.
-//  // PS: you can use .removeDuplicates() operator for additional guarantees and emission elimination if needed.
-//
-//  internal private(set) var isEnumerableStateMutablyAccessed: Bool = false
-//  internal private(set) var isDataStateMutablyAccessed: Bool = false
-//
-//  private let _pointer: UnsafeMutablePointer<RichState<EnumerableState, DataState>>
-//
-//  @_lifetime(borrow pointer)
-//  internal init(pointer: UnsafeMutablePointer<RichState<EnumerableState, DataState>>) {
-//    _pointer = pointer
-//  }
-//
-//  internal consuming func finalizeAccess() -> StateAndDataEmissionReason? {
-//    let emissionReason: StateAndDataEmissionReason? = switch (isEnumerableStateMutablyAccessed, isDataStateMutablyAccessed) {
-//    case (false, false): nil
-//    case (true, false): .stateChanged
-//    case (false, true): .dataChanged
-//    case (true, true): .stateAndDataChanged
-//    }
-//
-//    if let emissionReason {
-//      _pointer.pointee.lastEmissionReason = emissionReason
-//    }
-//
-//    return emissionReason
-//  }
-//}
-
 public struct RichStateAccessHandle<EnumerableState: ~Copyable, DataState: ~Copyable>: ~Copyable, ~Escapable {
   public var state: EnumerableState {
     yielding borrow {
@@ -120,8 +68,8 @@ public struct RichStateAccessHandle<EnumerableState: ~Copyable, DataState: ~Copy
   // Such cases are not expected in real cases though.
   // PS: you can use .removeDuplicates() operator for additional guarantees and emission elimination if needed.
 
-  internal private(set) var isEnumerableStateMutablyAccessed: Bool = false
-  internal private(set) var isDataStateMutablyAccessed: Bool = false
+  private var isEnumerableStateMutablyAccessed: Bool = false
+  private var isDataStateMutablyAccessed: Bool = false
 
   /// private
   @usableFromInline
@@ -162,29 +110,33 @@ public struct RichStateDataPropertyAccessHandle<EnumerableState: ~Copyable, Data
   public var data: DataState {
     @_unsafeSelfDependentResult
     borrow {
-      _pointer.pointee.data
+      _mutableRef.value.data
     }
     @_unsafeSelfDependentResult
     mutate {
       _isDataStateMutablyAccessed = true
-      return &_pointer.pointee.data
+      return &_mutableRef.value.data
     }
   }
   
-  internal private(set) var _isDataStateMutablyAccessed: Bool = false
+  private var _isDataStateMutablyAccessed: Bool = false
 
-  private let _pointer: UnsafeMutablePointer<RichState<EnumerableState, DataState>>
+  /// private
+  @usableFromInline
+  /* private */ internal var _mutableRef: _MutableRef<RichState<EnumerableState, DataState>>
 
-  @_lifetime(borrow pointer)
-  internal init(pointer: UnsafeMutablePointer<RichState<EnumerableState, DataState>>) {
-    _pointer = pointer
+  @_alwaysEmitIntoClient
+  @_lifetime(copy mutableRef)
+  @_transparent
+  internal init(mutableRef: consuming _MutableRef<RichState<EnumerableState, DataState>>) {
+    _mutableRef = mutableRef
   }
 
   internal consuming func finalizeAccess() -> StateAndDataEmissionReason? {
     let emissionReason: StateAndDataEmissionReason? = _isDataStateMutablyAccessed ? .dataChanged : nil
     
     if let emissionReason {
-      _pointer.pointee.lastEmissionReason = emissionReason
+      _mutableRef.value.lastEmissionReason = emissionReason
     }
 
     return emissionReason

@@ -230,21 +230,17 @@ extension _PublishedState {
     where StateEntity == RichState<EnumerableState, DataState> {
     _lock.lock(); defer { _lock.unlock() }
 
-    var stateAndData = _subject.value
+      var richState = _subject.value
+      var accessHandle = RichStateDataPropertyAccessHandle(mutableRef: _MutableRef(&richState))
+      let result = try access(&accessHandle)
+      let emissionReason = accessHandle.finalizeAccess()
 
-    let (emissionReason, result) =
-      try withUnsafeMutablePointer(to: &stateAndData) { mutablePointer throws(E) -> (StateAndDataEmissionReason?, Disconnected<R>) in
-        var accessHandle = RichStateDataPropertyAccessHandle(pointer: mutablePointer)
-        let result = try access(&accessHandle)
-        let emissionReason = accessHandle.finalizeAccess()
-        return (emissionReason, Disconnected(value: result))
+      let isMutablyAccessed = emissionReason != nil
+      if isMutablyAccessed {
+        _subject.value = richState
       }
-
-    if emissionReason != nil {
-      _subject.value = stateAndData
-    }
-
-    return result.take()
+        
+      return result
   }
 }
 

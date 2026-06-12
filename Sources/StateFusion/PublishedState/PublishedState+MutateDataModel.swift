@@ -7,6 +7,9 @@
 
 public import Combine
 
+// ⚠️ @iDmitriyy
+// TODO: - что будет если два раза подряд вызывать mutate {}.mutate{}? какой будет updateReason?
+
 // MARK: - Mutate operator
 
 extension Publisher where Failure == Never {
