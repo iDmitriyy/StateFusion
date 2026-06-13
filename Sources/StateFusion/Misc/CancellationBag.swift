@@ -284,55 +284,5 @@ extension Cancellable {
 
 // ----
 
-fileprivate typealias OrderedSet<Element> = Array<Element>
-
 // TODO: Remove it when OrderedSet from Swift-Collections become part of standard library
-
-//fileprivate struct OrderedSet<Element: Hashable & AnyObject> { // TODO: - finish imp
-//  private var elements: [Element] = []
-//  private var indices: [ObjectIdentifier: Int] = [:]
-//  
-//  init() {}
-//  
-//  mutating func append(contentsOf elements: some Sequence<Element>) {
-//    _ = elements
-//  }
-//  
-//  @discardableResult
-//  mutating func append(_ item: Element) -> (inserted: Bool, index: Int) {
-//    fatalError()
-//  }
-//  
-//  mutating func removeAll() {
-//    fatalError()
-//  }
-//}
-//
-//extension OrderedSet: RandomAccessCollection {
-//  subscript(position: Int) -> Element {
-//    fatalError()
-//  }
-//  
-//  var startIndex: Int {
-//    0
-//  }
-//  
-//  var endIndex: Int {
-//    0
-//  }
-//  
-//  typealias Index = Int
-//}
-//
-//extension OrderedSet: ExpressibleByArrayLiteral {
-//  typealias ArrayLiteralElement = Element
-//  
-//  init(arrayLiteral elements: Element...) {
-//    if elements.isEmpty {
-//      self.init()
-//    } else {
-//      // self.init(elements)
-//      fatalError() // FIXME: - tbd
-//    }
-//  }
-//}
+fileprivate typealias OrderedSet<Element> = Array<Element>

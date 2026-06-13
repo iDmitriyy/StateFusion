@@ -28,7 +28,6 @@ public final class PublishedEvent<Output> {
   public init() {
     wrappedValue = _subject.eraseToAnyPublisher()
   }
-
   
   public final func send(_ input: Output) {
     _subject.send(input)

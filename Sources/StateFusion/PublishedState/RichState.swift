@@ -8,12 +8,12 @@
 // MARK: - StateAndData
 
 public struct RichState<EnumerableState: ~Copyable, DataState: ~Copyable>: ~Copyable { // ?? RichState | StateCompound
-  /// Setter is available via accessHandle
+  /// Setter is unavailable. To update value use accessHandle
   public fileprivate(set) var state: EnumerableState
-  /// Setter is available via accessHandle
+  /// Setter is unavailable. To update value use accessHandle
   public fileprivate(set) var data: DataState
 
-  public fileprivate(set) var lastEmissionReason: StateAndDataEmissionReason
+  public fileprivate(set) var lastWrite: RichStateWriteKind
 
   // In UML:
   // - State is Enumerable State
@@ -23,7 +23,7 @@ public struct RichState<EnumerableState: ~Copyable, DataState: ~Copyable>: ~Copy
   public init(state: consuming EnumerableState, data: consuming DataState) {
     self.state = state
     self.data = data
-    lastEmissionReason = .initial
+    lastWrite = .initial
   }
 }
 
@@ -31,11 +31,13 @@ extension RichState: Copyable where EnumerableState: Copyable, DataState: Copyab
 
 extension RichState: Sendable where EnumerableState: Sendable, DataState: Sendable {}
 
-public enum StateAndDataEmissionReason: Equatable, Sendable {
+extension RichState: Equatable where EnumerableState: Equatable, DataState: Equatable {}
+
+public enum RichStateWriteKind: Equatable, Sendable {
   case initial
-  case stateChanged
-  case dataChanged
-  case stateAndDataChanged
+  case state
+  case data
+  case both
 }
 
 //===-------------------------------------------------------------------------------------------------------------------===//
@@ -44,22 +46,22 @@ public enum StateAndDataEmissionReason: Equatable, Sendable {
 
 public struct RichStateAccessHandle<EnumerableState: ~Copyable, DataState: ~Copyable>: ~Copyable, ~Escapable {
   public var state: EnumerableState {
-    yielding borrow {
-      yield _mutableRef.value.state
+    borrow {
+      _mutableRef.value.state
     }
-    yielding mutate {
+    mutate {
       isEnumerableStateMutablyAccessed = true // FIXME: - check for correctness doing it such way
-      yield &_mutableRef.value.state
+      return &_mutableRef.value.state
     }
   }
-  
+
   public var data: DataState {
-    yielding borrow {
-      yield _mutableRef.value.data
+    borrow {
+      _mutableRef.value.data
     }
-    yielding mutate {
+    mutate {
       isDataStateMutablyAccessed = true
-      yield &_mutableRef.value.data
+      return &_mutableRef.value.data
     }
   }
 
@@ -83,16 +85,16 @@ public struct RichStateAccessHandle<EnumerableState: ~Copyable, DataState: ~Copy
   }
 
   @usableFromInline
-  internal consuming func finalizeAccess() -> StateAndDataEmissionReason? {
-    let emissionReason: StateAndDataEmissionReason? = switch (isEnumerableStateMutablyAccessed, isDataStateMutablyAccessed) {
+  internal consuming func finalizeAccess() -> RichStateWriteKind? {
+    let emissionReason: RichStateWriteKind? = switch (isEnumerableStateMutablyAccessed, isDataStateMutablyAccessed) {
     case (false, false): nil
-    case (true, false): .stateChanged
-    case (false, true): .dataChanged
-    case (true, true): .stateAndDataChanged
+    case (true, false): .state
+    case (false, true): .data
+    case (true, true): .both
     }
 
     if let emissionReason {
-      _mutableRef.value.lastEmissionReason = emissionReason
+      _mutableRef.value.lastWrite = emissionReason
     }
 
     return emissionReason
@@ -108,17 +110,15 @@ extension RichStateAccessHandle: Sendable {}
 
 public struct RichStateDataPropertyAccessHandle<EnumerableState: ~Copyable, DataState: ~Copyable>: ~Copyable, ~Escapable {
   public var data: DataState {
-    @_unsafeSelfDependentResult
     borrow {
       _mutableRef.value.data
     }
-    @_unsafeSelfDependentResult
     mutate {
       _isDataStateMutablyAccessed = true
       return &_mutableRef.value.data
     }
   }
-  
+
   private var _isDataStateMutablyAccessed: Bool = false
 
   /// private
@@ -132,11 +132,11 @@ public struct RichStateDataPropertyAccessHandle<EnumerableState: ~Copyable, Data
     _mutableRef = mutableRef
   }
 
-  internal consuming func finalizeAccess() -> StateAndDataEmissionReason? {
-    let emissionReason: StateAndDataEmissionReason? = _isDataStateMutablyAccessed ? .dataChanged : nil
-    
+  internal consuming func finalizeAccess() -> RichStateWriteKind? {
+    let emissionReason: RichStateWriteKind? = _isDataStateMutablyAccessed ? .data : nil
+
     if let emissionReason {
-      _mutableRef.value.lastEmissionReason = emissionReason
+      _mutableRef.value.lastWrite = emissionReason
     }
 
     return emissionReason

@@ -69,26 +69,21 @@ public import class Foundation.NSRecursiveLock
 /// The struct holds a unique strong reference to an internal class containing a `CurrentValueSubject`
 /// and lock. The struct acts as a unique, non-copyable semantic gatekeeper to this shared storage.
 public struct PublishedState<StateEntity: Sendable>: ~Copyable, Sendable {
-  public var publisher: ValuePublisher<StateEntity> {
-    _stateImpObject.publisher
-  }
-
   @usableFromInline
   internal let _stateImpObject: _PublishedState<StateEntity>
 
-  public init(_ initialValue: consuming StateEntity) {
-    _stateImpObject = _PublishedState(initialValue)
-  }
-
-  public init<EnumerableState, DataState>(enumerableState: consuming EnumerableState, dataState: consuming DataState)
-    where StateEntity == RichState<EnumerableState, DataState> {
-    _stateImpObject = _PublishedState(RichState(state: enumerableState, data: dataState))
+  public init(_ initial: consuming StateEntity) {
+    _stateImpObject = _PublishedState(initial)
   }
 
   // TODO: - add bag
 
   deinit {
     _stateImpObject.finishPublisher()
+  }
+
+  public func publisher() -> CurrentValuePublisher<StateEntity> {
+    _stateImpObject.publisher
   }
 
   // MARK: Synchronous Thread-Safe access
@@ -118,6 +113,13 @@ public struct PublishedState<StateEntity: Sendable>: ~Copyable, Sendable {
   }
 }
 
+extension PublishedState {
+  public init<EnumerableState, DataState>(enumerableState: consuming EnumerableState, dataState: consuming DataState)
+    where StateEntity == RichState<EnumerableState, DataState> {
+    self.init(RichState(state: enumerableState, data: dataState))
+  }
+}
+
 extension PublishedState where StateEntity: AnyObject {
   @available(*, unavailable, message: "Not supported") // TODO: - implement
   public init(_: consuming sending StateEntity) {
@@ -133,7 +135,9 @@ extension PublishedState where StateEntity: AnyObject {
 
 @usableFromInline
 internal final class _PublishedState<StateEntity: Sendable>: @unchecked Sendable {
-  internal let publisher: ValuePublisher<StateEntity>
+  private var _publisher: CurrentValuePublisher<StateEntity>?
+
+  fileprivate var publisher: CurrentValuePublisher<StateEntity> {}
 
   @usableFromInline
   /* private */ internal let _subject: CurrentValueSubject<StateEntity, Never>
@@ -143,7 +147,14 @@ internal final class _PublishedState<StateEntity: Sendable>: @unchecked Sendable
 
   fileprivate init(_ initialValue: StateEntity) {
     _subject = CurrentValueSubject(initialValue)
-    publisher = _subject.eraseToAnyPublisher()
+
+    // TODO: - `publisher` subscriptions can retain underlying _subject. This should be tracked and logged as a warning
+    // that once `~Copyable PublishedState` shell deinited, the subject also
+    // deallocates (and _PublishedState instance as well).
+    publisher = CurrentValuePublisher(unverifiedValuePublisher: _subject, getCurrentValue: {
+      
+    })
+//    publisher = _subject.eraseToAnyPublisher()
   }
 
   fileprivate final func finishPublisher() {
@@ -159,7 +170,7 @@ internal final class _PublishedState<StateEntity: Sendable>: @unchecked Sendable
     _lock.lock(); defer { _lock.unlock() }
     return try access(_subject.value)
   }
-  
+
   /// Provides mutable access to the state, updating the stored state **only** when a mutation actually occurred.
   ///
   /// - Parameter access: A closure receiving an `inout AccessHandle`.
@@ -220,7 +231,7 @@ extension _PublishedState {
     if isMutablyAccessed {
       _subject.value = richState
     }
-      
+
     return result
   }
 
@@ -230,100 +241,29 @@ extension _PublishedState {
     where StateEntity == RichState<EnumerableState, DataState> {
     _lock.lock(); defer { _lock.unlock() }
 
-      var richState = _subject.value
-      var accessHandle = RichStateDataPropertyAccessHandle(mutableRef: _MutableRef(&richState))
-      let result = try access(&accessHandle)
-      let emissionReason = accessHandle.finalizeAccess()
+    var richState = _subject.value
+    var accessHandle = RichStateDataPropertyAccessHandle(mutableRef: _MutableRef(&richState))
+    let result = try access(&accessHandle)
+    let emissionReason = accessHandle.finalizeAccess()
 
-      let isMutablyAccessed = emissionReason != nil
-      if isMutablyAccessed {
-        _subject.value = richState
-      }
-        
-      return result
+    let isMutablyAccessed = emissionReason != nil
+    if isMutablyAccessed {
+      _subject.value = richState
+    }
+
+    return result
   }
 }
 
 extension _PublishedState {
-  public func enumerableStatePublisher<EnumerableState, DataState>() -> ValuePublisher<EnumerableState>
+  public func enumerableStatePublisher<EnumerableState, DataState>() -> CurrentValuePublisher<EnumerableState>
     where StateEntity == RichState<EnumerableState, DataState> {
     fatalError()
   }
 
   // FIXME: - implement
-  public func dataStatePublisher<EnumerableState, DataState>() -> ValuePublisher<DataState>
+  public func dataStatePublisher<EnumerableState, DataState>() -> CurrentValuePublisher<DataState>
     where StateEntity == RichState<EnumerableState, DataState> {
     fatalError()
   }
-}
-
-//===-------------------------------------------------------------------------------------------------------------------===//
-
-// MARK: - Imperative Event Handling Funcs
-
-extension PublishedState {
-  public func onEventReduce<R>(_ reduceState: (_ state: borrowing StateEntity) -> EventOutcome<StateEntity, R>,
-                               do action: (R) -> Void) {
-    if let reductionOutput = withLock_onEvenReduce(reduceState) {
-      action(reductionOutput)
-    }
-  }
-
-  public func onEventReduce<R>(_ reduceState: (_ state: borrowing StateEntity) -> EventOutcome<StateEntity, R>) -> R? {
-    withLock_onEvenReduce(reduceState)
-  }
-
-  public func onEventReduce(_ reduceState: (_ state: borrowing StateEntity) -> EventOutcome<StateEntity, Void>) {
-    withLock_onEvenReduce(reduceState)
-  }
-
-  private func withLock_onEvenReduce<R>(_ reduceState: (_ state: borrowing StateEntity) -> EventOutcome<StateEntity, R>) -> R? {
-    withLockMutableAccess {
-      let eventOutcome = reduceState($0.stateEntity)
-      switch eventOutcome {
-      case let .transition(newState, oldStateAssociatedValue):
-        $0.stateEntity = newState
-        return oldStateAssociatedValue
-
-      case let .handled(oldStateAssociatedValue):
-        return oldStateAssociatedValue
-
-      case .ignore:
-        return nil
-      }
-    }
-  }
-
-  // -------
-
-  // FIXME: state.handle { | state.read { – сделать невоpможным обращение к state внутри access замыкания
-  // Если пользователь случайно сделает I/O внутри handle { }, lock будет заблокирован на всё время I/O.
-
-  public func read<R>(_ closure: (borrowing StateEntity) -> sending R) -> sending R {
-    withLockAccess(closure)
-  }
-
-  /*
-   Ok. How good is my solution dealing with race conditions compared to flux / redux / TCA, and particulary for side effects
-
-   ## Рекомендации по улучшению thread safety
-
-   1. **Добавить `nonrecursive` lock вместо RecursiveLock** или опцию. Reentrancy почти всегда баг, а не intentional design. Если нужен read during mutation — вынести read до handle.
-
-   2. **Документировать contract:** closure в `handle { }` MUST be synchronous and fast. Не делать I/O, не вызывать async.
-
-   3. **Для критических сквозных операций (state change + side effect атомарно)** можно добавить `handle(scheduling:)`:
-   ```swift
-   state.handle(scheduling: .async) { state in
-       // state evaluated under lock, but no I/O here
-       return .transition(to: .loaded)
-   } do: { output in
-       await network.load() // side effect — async, not under lock
-   }
-   ```
-
-   4. **Глобальная проблема ordering** не решается без центрального serial executor. Для RIBs это допустимо — каждый RIB имеет свой `PublishedState`, cross-RIB коммуникация через router.
-
-   Но базовый вопрос: **насколько критична thread-safety для RIBs + UDF сценариев?** Обычно UI-события на MainActor, а network callbacks приходят на serial queue или MainActor. На практике race condition редки. Реальная сложность — reentrancy и случайный I/O под lock.
-   */
 }
