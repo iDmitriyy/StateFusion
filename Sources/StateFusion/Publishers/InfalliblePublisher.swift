@@ -13,7 +13,7 @@ public typealias InfalliblePublisher<Output> = AnyPublisher<Output, Never>
 
 // Driver:
 // -> CurrentValuePublisher -> DriverPublisher | InfallibleDataStream
-
+// continuous-value vs discrete-event
 // Signal:
 // -> PassthroughPublisher -> SignalPublisher | InfallibleEventStream
 

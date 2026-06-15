@@ -106,13 +106,19 @@ public struct SequentialSnapshot<T> {
   
   /// A monotonically increasing identifier for this snapshot version.
   @inlinable @inline(always)
-  public var version: some Comparable { _serialNumber }
+  public var version: some Comparable { _version }
   
+  /// serial number
   @usableFromInline
-  internal let _serialNumber: UInt64
+  internal let _version: UInt64
   
   internal init(initial value: T) {
     self.value = value
-    self._serialNumber = 0
+    self._version = 0
+  }
+
+  internal init(value: T, serialNumber: UInt64) {
+    self.value = value
+    self._version = serialNumber
   }
 }
