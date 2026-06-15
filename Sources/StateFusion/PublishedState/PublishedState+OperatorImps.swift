@@ -47,7 +47,7 @@ extension Publisher where Failure == Never {
   // State of StateAndData :
 
   internal func _filterBy<State, EvaluationOutput>(
-    stateAndDataState publishedState: borrowing PublishedState<RichState<State, some Any>>,
+    stateAndDataState publishedState: borrowing PublishedState<StateCompound<State, some Any>>,
     output _: EvaluationOutput.Type = EvaluationOutput.self,
     where evaluate: sending @escaping (borrowing State) -> sending EventFilteringResult<State, EvaluationOutput>,
   )
@@ -82,9 +82,9 @@ extension Publisher where Failure == Never {
   // StateAndData :
 
   internal func _filterBy<State, DataState, EvaluationOutput>(
-    stateAndData _: borrowing PublishedState<RichState<State, DataState>>,
+    stateAndData _: borrowing PublishedState<StateCompound<State, DataState>>,
     output _: EvaluationOutput.Type = EvaluationOutput.self,
-    where _: sending @escaping (borrowing RichState<State, DataState>) -> sending EventFilteringResult<State, EvaluationOutput>,
+    where _: sending @escaping (borrowing StateCompound<State, DataState>) -> sending EventFilteringResult<State, EvaluationOutput>,
   )
     -> AnyPublisher<(Output, EvaluationOutput), Failure> {
     fatalError()
@@ -166,7 +166,7 @@ extension Publisher where Failure == Never {
   // TODO: - sending MutationOutput | sending Void – no need to be sending, rx streams allow pass nonSendable values
   // However, it might be good to push sendable values via rx streams, so MutationOutput should be constrained to Sendable.
   // In practice, all of them are typically sendable. For other cases, make _unsafe operators.
-  
+
   internal func _mutate<DataState, MutationOutput>(
     dataState publishedState: borrowing PublishedState<DataState>,
     mutation: sending @escaping (inout GenericStateAccessHandle<DataState>, borrowing Output) -> sending MutationOutput,
@@ -190,14 +190,14 @@ extension Publisher where Failure == Never {
   // DataState of StateAndData :
 
   internal func _mutateStateAndData<EnumerableState, DataState, MutationOutput>(
-    dataState publishedState: borrowing PublishedState<RichState<EnumerableState, DataState>>,
-    mutation: sending @escaping (inout RichStateDataPropertyAccessHandle<EnumerableState, DataState>, borrowing Output) -> sending MutationOutput,
+    dataState publishedState: borrowing PublishedState<StateCompound<EnumerableState, DataState>>,
+    mutation: sending @escaping (inout StateCompoundDataPropertyAccessHandle<EnumerableState, DataState>, borrowing Output) -> sending MutationOutput,
   )
     -> AnyPublisher<(Output, MutationOutput), Failure> {
     compactMap { [weak publishedState = publishedState._stateImpObject] element -> (Output, MutationOutput)? in
       guard let publishedState else {
         assertionFailure(_publishedStateDeallocationAssertMessage(output: Output.self,
-                                                                  state: RichState<EnumerableState, DataState>.self))
+                                                                  state: StateCompound<EnumerableState, DataState>.self))
         return nil
       }
 
@@ -212,9 +212,9 @@ extension Publisher where Failure == Never {
 
   // DataState of StateAndData :
 
-  internal func _mutateStateAndData<EnumerableState, DataState, MutationOutput>(
-    richState publishedState: borrowing PublishedState<RichState<EnumerableState, DataState>>,
-    mutation: sending @escaping (inout RichStateAccessHandle<EnumerableState, DataState>, borrowing Output) -> sending MutationOutput,
+  internal func _mutateStateCompound<EnumerableState, DataState, MutationOutput>(
+    stateCompound publishedState: borrowing PublishedState<StateCompound<EnumerableState, DataState>>,
+    mutation: sending @escaping (inout StateCompoundAccessHandle<EnumerableState, DataState>, borrowing Output) -> sending MutationOutput,
   )
     -> AnyPublisher<(Output, MutationOutput), Failure> {
     // 1. Only state mutated
@@ -224,11 +224,11 @@ extension Publisher where Failure == Never {
     compactMap { [weak publishedState = publishedState._stateImpObject] element -> (Output, MutationOutput)? in
       guard let publishedState else {
         assertionFailure(_publishedStateDeallocationAssertMessage(output: Output.self,
-                                                                  state: RichState<EnumerableState, DataState>.self))
+                                                                  state: StateCompound<EnumerableState, DataState>.self))
         return nil
       }
 
-      let mutationOutput: MutationOutput = publishedState.withLockMutableAccessRichState {
+      let mutationOutput: MutationOutput = publishedState.withLockMutableAccessStateCompound {
         mutation(&$0, element)
       }
 

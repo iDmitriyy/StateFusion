@@ -83,7 +83,7 @@ public struct PublishedState<StateEntity: Sendable>: ~Copyable, Sendable {
   }
 
   public func publisher() -> CurrentValuePublisher<StateEntity> {
-    _stateImpObject.publisher
+    _stateImpObject.publisher()
   }
 
   // MARK: Synchronous Thread-Safe access
@@ -95,7 +95,7 @@ public struct PublishedState<StateEntity: Sendable>: ~Copyable, Sendable {
     try _stateImpObject.withLockAccess(access)
   }
 
-  /// For mutating `RichState` use withLockMutableAccessRichState
+  /// For mutating `StateCompound` use withLockMutableAccessStateCompound
   @inlinable
   @inline(always)
   public func withLockMutableAccess<R>(_ access: (inout GenericStateAccessHandle<StateEntity>) -> sending R)
@@ -105,18 +105,18 @@ public struct PublishedState<StateEntity: Sendable>: ~Copyable, Sendable {
 
   @inlinable
   @inline(always)
-  public func withLockMutableAccessRichState<EnumerableState, DataState, R, E>(
-    _ access: (inout RichStateAccessHandle<EnumerableState, DataState>) throws(E) -> sending R,
+  public func withLockMutableAccessStateCompound<EnumerableState, DataState, R, E>(
+    _ access: (inout StateCompoundAccessHandle<EnumerableState, DataState>) throws(E) -> sending R,
   ) throws(E) -> sending R
-    where StateEntity == RichState<EnumerableState, DataState> {
-    try _stateImpObject.withLockMutableAccessRichState(access)
+    where StateEntity == StateCompound<EnumerableState, DataState> {
+    try _stateImpObject.withLockMutableAccessStateCompound(access)
   }
 }
 
 extension PublishedState {
   public init<EnumerableState, DataState>(enumerableState: consuming EnumerableState, dataState: consuming DataState)
-    where StateEntity == RichState<EnumerableState, DataState> {
-    self.init(RichState(state: enumerableState, data: dataState))
+    where StateEntity == StateCompound<EnumerableState, DataState> {
+    self.init(StateCompound(state: enumerableState, data: dataState))
   }
 }
 
@@ -135,9 +135,7 @@ extension PublishedState where StateEntity: AnyObject {
 
 @usableFromInline
 internal final class _PublishedState<StateEntity: Sendable>: @unchecked Sendable {
-  private var _publisher: CurrentValuePublisher<StateEntity>?
-
-  fileprivate var publisher: CurrentValuePublisher<StateEntity> {}
+  private weak var _shared_publisher: CurrentValuePublisher<StateEntity>? // FIXME: - is it safe and no retain cycle?
 
   @usableFromInline
   /* private */ internal let _subject: CurrentValueSubject<StateEntity, Never>
@@ -151,14 +149,27 @@ internal final class _PublishedState<StateEntity: Sendable>: @unchecked Sendable
     // TODO: - `publisher` subscriptions can retain underlying _subject. This should be tracked and logged as a warning
     // that once `~Copyable PublishedState` shell deinited, the subject also
     // deallocates (and _PublishedState instance as well).
-    publisher = CurrentValuePublisher(unverifiedValuePublisher: _subject, getCurrentValue: {
-      
-    })
 //    publisher = _subject.eraseToAnyPublisher()
   }
 
-  fileprivate final func finishPublisher() {
+  fileprivate final func finishPublisher() { // TODO: - need better name
+    _lock.lock(); defer { _lock.unlock() }
     _subject.send(completion: .finished)
+  }
+
+  fileprivate func publisher() -> CurrentValuePublisher<StateEntity> {
+    _lock.lock(); defer { _lock.unlock() }
+
+    let publisher: CurrentValuePublisher<StateEntity>
+    if let _publisher = _shared_publisher {
+      publisher = _publisher
+    } else {
+      publisher = CurrentValuePublisher(retained_unverifiedValuePublisher: _subject, getCurrentValue: { [publishedState = self] in
+        publishedState.withLockAccess { stateEntity in stateEntity }
+      })
+      _shared_publisher = publisher
+    }
+    return publisher
   }
 
   // MARK: Synchronous Thread-Safe access
@@ -216,39 +227,39 @@ internal final class _PublishedState<StateEntity: Sendable>: @unchecked Sendable
 extension _PublishedState {
   @inlinable
   @inline(always)
-  internal final func withLockMutableAccessRichState<EnumerableState, DataState, R, E>(
-    _ access: (inout RichStateAccessHandle<EnumerableState, DataState>) throws(E) -> sending R,
+  internal final func withLockMutableAccessStateCompound<EnumerableState, DataState, R, E>(
+    _ access: (inout StateCompoundAccessHandle<EnumerableState, DataState>) throws(E) -> sending R,
   ) throws(E) -> sending R
-    where StateEntity == RichState<EnumerableState, DataState> {
+    where StateEntity == StateCompound<EnumerableState, DataState> {
     _lock.lock(); defer { _lock.unlock() }
 
-    var richState = _subject.value
-    var accessHandle = RichStateAccessHandle(mutableRef: _MutableRef(&richState))
+    var stateCompound = _subject.value
+    var accessHandle = StateCompoundAccessHandle(mutableRef: _MutableRef(&stateCompound))
     let result = try access(&accessHandle)
     let emissionReason = accessHandle.finalizeAccess()
 
     let isMutablyAccessed = emissionReason != nil
     if isMutablyAccessed {
-      _subject.value = richState
+      _subject.value = stateCompound
     }
 
     return result
   }
 
   internal final func withLockMutableAccessDataState<EnumerableState, DataState, R, E>(
-    _ access: (inout RichStateDataPropertyAccessHandle<EnumerableState, DataState>) throws(E) -> sending R,
+    _ access: (inout StateCompoundDataPropertyAccessHandle<EnumerableState, DataState>) throws(E) -> sending R,
   ) throws(E) -> sending R
-    where StateEntity == RichState<EnumerableState, DataState> {
+    where StateEntity == StateCompound<EnumerableState, DataState> {
     _lock.lock(); defer { _lock.unlock() }
 
-    var richState = _subject.value
-    var accessHandle = RichStateDataPropertyAccessHandle(mutableRef: _MutableRef(&richState))
+    var stateCompound = _subject.value
+    var accessHandle = StateCompoundDataPropertyAccessHandle(mutableRef: _MutableRef(&stateCompound))
     let result = try access(&accessHandle)
     let emissionReason = accessHandle.finalizeAccess()
 
     let isMutablyAccessed = emissionReason != nil
     if isMutablyAccessed {
-      _subject.value = richState
+      _subject.value = stateCompound
     }
 
     return result
@@ -257,13 +268,13 @@ extension _PublishedState {
 
 extension _PublishedState {
   public func enumerableStatePublisher<EnumerableState, DataState>() -> CurrentValuePublisher<EnumerableState>
-    where StateEntity == RichState<EnumerableState, DataState> {
+    where StateEntity == StateCompound<EnumerableState, DataState> {
     fatalError()
   }
 
   // FIXME: - implement
   public func dataStatePublisher<EnumerableState, DataState>() -> CurrentValuePublisher<DataState>
-    where StateEntity == RichState<EnumerableState, DataState> {
+    where StateEntity == StateCompound<EnumerableState, DataState> {
     fatalError()
   }
 }

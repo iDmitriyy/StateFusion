@@ -37,12 +37,12 @@ extension Publisher where Failure == Never {
 
 //===-------------------------------------------------------------------------------------------------------------------===//
 
-// MARK: - Mutate RichState.Data
+// MARK: - Mutate StateCompound.Data
 
 extension Publisher where Failure == Never {
   public func mutate<EnumerableState, DataState>(
-    dataState publishedState: borrowing PublishedState<RichState<EnumerableState, DataState>>,
-    mutation: sending @escaping (inout RichStateDataPropertyAccessHandle<EnumerableState, DataState>, borrowing Output) -> sending Void,
+    dataState publishedState: borrowing PublishedState<StateCompound<EnumerableState, DataState>>,
+    mutation: sending @escaping (inout StateCompoundDataPropertyAccessHandle<EnumerableState, DataState>, borrowing Output) -> sending Void,
   )
     -> AnyCancellable {
     _mutateStateAndData(dataState: publishedState, mutation: mutation)
@@ -50,9 +50,9 @@ extension Publisher where Failure == Never {
   }
   
   public func mutate<EnumerableState, DataState, MutationOutput>(
-    dataState publishedState: borrowing PublishedState<RichState<EnumerableState, DataState>>,
+    dataState publishedState: borrowing PublishedState<StateCompound<EnumerableState, DataState>>,
     output _: MutationOutput.Type,
-    mutation: sending @escaping (inout RichStateDataPropertyAccessHandle<EnumerableState, DataState>, borrowing Output) -> sending MutationOutput,
+    mutation: sending @escaping (inout StateCompoundDataPropertyAccessHandle<EnumerableState, DataState>, borrowing Output) -> sending MutationOutput,
   )
     -> AnyPublisher<(Output, MutationOutput), Failure> {
     _mutateStateAndData(dataState: publishedState, mutation: mutation)
@@ -60,26 +60,26 @@ extension Publisher where Failure == Never {
   }
 }
 
-// MARK: - Mutate RichState
+// MARK: - Mutate StateCompound
 
 extension Publisher where Failure == Never {
   public func mutate<EnumerableState, DataState>(
-    richState publishedState: borrowing PublishedState<RichState<EnumerableState, DataState>>,
-    mutation: sending @escaping (inout RichStateAccessHandle<EnumerableState, DataState>, borrowing Output) -> sending Void,
+    stateCompound publishedState: borrowing PublishedState<StateCompound<EnumerableState, DataState>>,
+    mutation: sending @escaping (inout StateCompoundAccessHandle<EnumerableState, DataState>, borrowing Output) -> sending Void,
   )
     -> AnyCancellable {
-      _mutateStateAndData(richState: publishedState, mutation: mutation)
+      _mutateStateCompound(stateCompound: publishedState, mutation: mutation)
         .subscribe()
     // FIXME: - + share()
   }
   
   public func mutate<EnumerableState, DataState, MutationOutput>(
-    richState publishedState: borrowing PublishedState<RichState<EnumerableState, DataState>>,
+    stateCompound publishedState: borrowing PublishedState<StateCompound<EnumerableState, DataState>>,
     output _: MutationOutput.Type,
-    mutation: sending @escaping (inout RichStateAccessHandle<EnumerableState, DataState>, borrowing Output) -> sending MutationOutput,
+    mutation: sending @escaping (inout StateCompoundAccessHandle<EnumerableState, DataState>, borrowing Output) -> sending MutationOutput,
   )
     -> AnyPublisher<(Output, MutationOutput), Failure> {
-      _mutateStateAndData(richState: publishedState, mutation: mutation)
+      _mutateStateCompound(stateCompound: publishedState, mutation: mutation)
     // FIXME: - + share()
   }
 }

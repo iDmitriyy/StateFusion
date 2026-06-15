@@ -7,13 +7,34 @@
 
 // MARK: - StateAndData
 
-public struct RichState<EnumerableState: ~Copyable, DataState: ~Copyable>: ~Copyable { // ?? RichState | StateCompound
-  /// Setter is unavailable. To update value use accessHandle
+/// A composite container that bundles a finite state machine (`state`) with its associated extended data (`data`).
+///
+/// This structure provides a data snapshot that can be used for both direct imperative reads
+/// and emission through reactive streams. Carrying the `lastWrite` property allows downstream code
+/// to instantly know how this snapshot was produced without needing to compare new values against previous ones.
+///
+/// ### UML Mapping
+/// - **EnumerableState**: Represents the discrete, enumerable **State**  of finite State Machine.
+/// - **DataState**: Represents the **Extended State** (additional data that affects or accompanies transitions).
+/// - **RichState**: Represents the **Composite State** or **State Compound**.
+public struct StateCompound<EnumerableState: ~Copyable, DataState: ~Copyable>: ~Copyable {
+  /// The current discrete state machine component.
+  /// To modify this value, use the appropriate `accessHandle`.
   public fileprivate(set) var state: EnumerableState
-  /// Setter is unavailable. To update value use accessHandle
+
+  /// The extended contextual data associated with the state.
+  /// To modify this value, use the appropriate `accessHandle`.
   public fileprivate(set) var data: DataState
 
-  public fileprivate(set) var lastWrite: RichStateWriteKind
+  /// A marker indicating which specific write operation generated this state snapshot.
+  ///
+  /// Allows reactive stream subscribers and components to instantly see which property
+  /// (`state` or `data`) was mutated, without needing to compare the new snapshot against the previous one.
+  ///
+  /// - Note: This tracks the execution path of the write call. If a property is overwritten with the exact same
+  /// value (e.g., `data.text = data.text`), it is still recorded as a `.data` write operation, no matter
+  /// if the data effectively stayed the same.
+  public fileprivate(set) var lastWrite: StateCompoundWriteOperation
 
   // In UML:
   // - State is Enumerable State
@@ -27,24 +48,32 @@ public struct RichState<EnumerableState: ~Copyable, DataState: ~Copyable>: ~Copy
   }
 }
 
-extension RichState: Copyable where EnumerableState: Copyable, DataState: Copyable {}
+extension StateCompound: Copyable where EnumerableState: Copyable, DataState: Copyable {}
 
-extension RichState: Sendable where EnumerableState: Sendable, DataState: Sendable {}
+extension StateCompound: Sendable where EnumerableState: Sendable, DataState: Sendable {}
 
-extension RichState: Equatable where EnumerableState: Equatable, DataState: Equatable {}
+extension StateCompound: Equatable where EnumerableState: Equatable, DataState: Equatable {}
 
-public enum RichStateWriteKind: Equatable, Sendable {
+/// Specifies which property was accessed during the write operation that produced this `RichState`.
+public enum StateCompoundWriteOperation: Equatable, Sendable {
+  /// The state compound was created for the first time via the initializer.
   case initial
+
+  /// The write operation was performed exclusively on the `state` property.
   case state
+
+  /// The write operation was performed exclusively on the `data` property.
   case data
-  case both
+
+  /// Both `state` and `data` properties were updated together within a single write transaction.
+  case combined
 }
 
 //===-------------------------------------------------------------------------------------------------------------------===//
 
 // MARK: - AccessHandle
 
-public struct RichStateAccessHandle<EnumerableState: ~Copyable, DataState: ~Copyable>: ~Copyable, ~Escapable {
+public struct StateCompoundAccessHandle<EnumerableState: ~Copyable, DataState: ~Copyable>: ~Copyable, ~Escapable {
   public var state: EnumerableState {
     borrow {
       _mutableRef.value.state
@@ -75,40 +104,40 @@ public struct RichStateAccessHandle<EnumerableState: ~Copyable, DataState: ~Copy
 
   /// private
   @usableFromInline
-  /* private */ internal var _mutableRef: _MutableRef<RichState<EnumerableState, DataState>>
+  /* private */ internal var _mutableRef: _MutableRef<StateCompound<EnumerableState, DataState>>
 
   @_alwaysEmitIntoClient
   @_lifetime(copy mutableRef)
   @_transparent
-  internal init(mutableRef: consuming _MutableRef<RichState<EnumerableState, DataState>>) {
+  internal init(mutableRef: consuming _MutableRef<StateCompound<EnumerableState, DataState>>) {
     _mutableRef = mutableRef
   }
 
   @usableFromInline
-  internal consuming func finalizeAccess() -> RichStateWriteKind? {
-    let emissionReason: RichStateWriteKind? = switch (isEnumerableStateMutablyAccessed, isDataStateMutablyAccessed) {
+  internal consuming func finalizeAccess() -> StateCompoundWriteOperation? {
+    let writeOperation: StateCompoundWriteOperation? = switch (isEnumerableStateMutablyAccessed, isDataStateMutablyAccessed) {
     case (false, false): nil
     case (true, false): .state
     case (false, true): .data
-    case (true, true): .both
+    case (true, true): .combined
     }
 
-    if let emissionReason {
-      _mutableRef.value.lastWrite = emissionReason
+    if let writeOperation {
+      _mutableRef.value.lastWrite = writeOperation
     }
 
-    return emissionReason
+    return writeOperation
   }
 }
 
 @available(*, unavailable, message: "AccessHandle is restricted to local use within a `access` closure; it cannot be Sendable and must not cross isolation boundaries.")
-extension RichStateAccessHandle: Sendable {}
+extension StateCompoundAccessHandle: Sendable {}
 
 //===-------------------------------------------------------------------------------------------------------------------===//
 
 // MARK: - Data Property AccessHandle
 
-public struct RichStateDataPropertyAccessHandle<EnumerableState: ~Copyable, DataState: ~Copyable>: ~Copyable, ~Escapable {
+public struct StateCompoundDataPropertyAccessHandle<EnumerableState: ~Copyable, DataState: ~Copyable>: ~Copyable, ~Escapable {
   public var data: DataState {
     borrow {
       _mutableRef.value.data
@@ -123,25 +152,25 @@ public struct RichStateDataPropertyAccessHandle<EnumerableState: ~Copyable, Data
 
   /// private
   @usableFromInline
-  /* private */ internal var _mutableRef: _MutableRef<RichState<EnumerableState, DataState>>
+  /* private */ internal var _mutableRef: _MutableRef<StateCompound<EnumerableState, DataState>>
 
   @_alwaysEmitIntoClient
   @_lifetime(copy mutableRef)
   @_transparent
-  internal init(mutableRef: consuming _MutableRef<RichState<EnumerableState, DataState>>) {
+  internal init(mutableRef: consuming _MutableRef<StateCompound<EnumerableState, DataState>>) {
     _mutableRef = mutableRef
   }
 
-  internal consuming func finalizeAccess() -> RichStateWriteKind? {
-    let emissionReason: RichStateWriteKind? = _isDataStateMutablyAccessed ? .data : nil
+  internal consuming func finalizeAccess() -> StateCompoundWriteOperation? {
+    let writeOperation: StateCompoundWriteOperation? = _isDataStateMutablyAccessed ? .data : nil
 
-    if let emissionReason {
-      _mutableRef.value.lastWrite = emissionReason
+    if let writeOperation {
+      _mutableRef.value.lastWrite = writeOperation
     }
 
-    return emissionReason
+    return writeOperation
   }
 }
 
 @available(*, unavailable, message: "AccessHandle is restricted to local use within a `access` closure; it cannot be Sendable and must not cross isolation boundaries.")
-extension RichStateDataPropertyAccessHandle: Sendable {}
+extension StateCompoundDataPropertyAccessHandle: Sendable {}

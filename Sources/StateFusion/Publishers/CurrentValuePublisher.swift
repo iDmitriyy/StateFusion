@@ -8,7 +8,7 @@
 public import Combine
 
 /// A type-erasing publisher that represents a continuous state or value stream.
-public struct CurrentValuePublisher<Output>: Publisher {
+public final class CurrentValuePublisher<Output>: Publisher {
   public typealias Failure = Never
 
   // public var valueSnapshot: Snapshot {}
@@ -16,13 +16,15 @@ public struct CurrentValuePublisher<Output>: Publisher {
   // public var value: Output {}
 
   /// private
-  @usableFromInline /* private */ internal let _getValue: () -> Output
+  @usableFromInline
+  /* private */ internal let _getValue: () -> Output
 
   /// private
-  @usableFromInline /* private */ internal let _subscribeClosure: (AnySubscriber<Output, Never>) -> Void
+  @usableFromInline
+  /* private */ internal let _subscribeClosure: (AnySubscriber<Output, Never>) -> Void
 
   @inlinable
-  internal init<P: Publisher>(unverifiedValuePublisher base: P,
+  internal init<P: Publisher>(retained_unverifiedValuePublisher base: P,
                               getCurrentValue: @escaping () -> Output)
     where P.Output == Output, P.Failure == Never {
     _subscribeClosure = { [base] subscriber in
@@ -33,20 +35,21 @@ public struct CurrentValuePublisher<Output>: Publisher {
   }
 
   @inlinable
-  public func receive<S: Subscriber>(subscriber: S) where S.Input == Output, S.Failure == Never {
+  public final func receive<S: Subscriber>(subscriber: S) where S.Input == Output, S.Failure == Never {
     _subscribeClosure(AnySubscriber(subscriber))
   }
 }
 
 extension CurrentValuePublisher {
-  public init(_ subject: CurrentValueSubject<Output, Never>) {
-    self.init(unverifiedValuePublisher: subject, getCurrentValue: { subject.value })
+  public convenience init(_ subject: CurrentValueSubject<Output, Never>) {
+    self.init(retained_unverifiedValuePublisher: subject,
+              getCurrentValue: { [unowned subject] in subject.value })
   }
 }
 
 extension CurrentValuePublisher {
   @inlinable
-  public func takeUpdates(afterSnapshot snapshot: Snapshot) -> AnyPublisher<Output, Never> {
+  public final func takeUpdates(afterSnapshot snapshot: Snapshot) -> AnyPublisher<Output, Never> {
     _ = snapshot
     fatalError()
   }
@@ -68,7 +71,7 @@ extension CurrentValuePublisher {
   /// right before the subscription is attached. A standard publisher will either deliver a duplicate
   /// old value (causing redundant processing) or drop the critical mid-gap update if you blindly apply `.dropFirst()`.
   ///
-  /// ### The Snapshot Solution
+  /// ### Solution
   /// The `Snapshot` token tracks the exact timeline version of the state when it was read. Passing this
   /// token into ``CurrentValuePublisher/takeUpdates(afterSnapshot:)`` bridges the time gap safely:
   /// - If a concurrent mutation happened during the gap, the updated value is delivered immediately.
@@ -76,7 +79,7 @@ extension CurrentValuePublisher {
   ///
   /// ### Example Usage
   ///
-  /// ```
+  /// ```swift
   /// final class DataConsumer {
   ///   private let engine: CoreEngine
   ///   private let bag = CancellationBag()
@@ -95,8 +98,21 @@ extension CurrentValuePublisher {
   ///   }
   /// }
   /// ```
-  public struct Snapshot { // +? @frozen
-    public let value: Output
-    @usableFromInline internal let serialNumber: UInt32
+  public typealias Snapshot = SequentialSnapshot<Output>
+}
+
+public struct SequentialSnapshot<T> {
+  public let value: T
+  
+  /// A monotonically increasing identifier for this snapshot version.
+  @inlinable @inline(always)
+  public var version: some Comparable { _serialNumber }
+  
+  @usableFromInline
+  internal let _serialNumber: UInt64
+  
+  internal init(initial value: T) {
+    self.value = value
+    self._serialNumber = 0
   }
 }

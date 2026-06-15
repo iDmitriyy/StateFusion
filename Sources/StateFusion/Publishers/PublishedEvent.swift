@@ -17,7 +17,7 @@ public import Combine
 /// - projectedValue – когда нужно за-accept'ить данные в PublishSubject. Как правило, это нужно внутри самого интерактора.
 @propertyWrapper
 public final class PublishedEvent<Output> {
-  public final let wrappedValue: EventPublisher<Output>
+  public final let wrappedValue: InfalliblePublisher<Output>
 
   public final var projectedValue: PublishedEvent<Output> {
     self
