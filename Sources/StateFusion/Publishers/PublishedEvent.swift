@@ -34,22 +34,30 @@ public final class PublishedEvent<Output> {
   }
 }
 
-//@propertyWrapper
-//public final class PublishedValue<Output> {
-//  public final let wrappedValue: CurrentValuePublisher<Output>
-//
-//  public final var projectedValue: PublishedValue<Output> {
-//    self
-//  }
-//
-//  private let _subject: InfallibleValueSubject<Output>
-//
-//  public init(initial: Output) {
-//    _subject = InfallibleValueSubject<Output>(initial)
-//    wrappedValue = _subject.eraseToAnyPublisher()
-//  }
-//  
-//  public final func send(_ input: Output) {
-//    _subject.send(input)
-//  }
-//}
+@propertyWrapper
+public final class PublishedValue<Output> {
+  public final let wrappedValue: InfallibleValuePublisher<Output>
+
+  public final var projectedValue: PublishedValue<Output> {
+    self
+  }
+
+  private let _subject: InfallibleValueSubject<Output>
+
+  public init(initial: Output) {
+    _subject = InfallibleValueSubject<Output>(initial)
+    wrappedValue = _subject.valuePublisher()
+  }
+  
+  public final func send(_ input: Output) {
+    _subject.send(input)
+  }
+}
+
+class AAA {
+  @PublishedValue var value: InfallibleValuePublisher<Int>
+  
+  init() {
+    self._value = PublishedValue(initial: 0)
+  }
+}

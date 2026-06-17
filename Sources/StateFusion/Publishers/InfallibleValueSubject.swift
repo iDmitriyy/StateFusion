@@ -14,7 +14,7 @@ public struct OwnedInfallibleValueSubject<Output>: ~Copyable {}
 
 public final class InfallibleValueSubject<Output>: Subject<Output, Never> {
   internal let _subject: CurrentValueSubject<SequentialSnapshot<Output>, Never>
-  private let _serialNumber: RecursiveLock<UInt64>
+  private let _version: RecursiveLock<UInt64>
 
   public final var valueSnapshot: SequentialSnapshot<Output> {
     _subject.value
@@ -28,13 +28,9 @@ public final class InfallibleValueSubject<Output>: Subject<Output, Never> {
 
   public init(_ value: Output) {
     let initial = SequentialSnapshot(initial: value)
-    _serialNumber = RecursiveLock(initial._version)
+    _version = RecursiveLock(initial._version)
     _subject = CurrentValueSubject(initial)
   }
-
-  // public final func versionedPublisher() -> AnyPublisher<SequentialSnapshot<Output>, Never> {
-  //   _subject.eraseToAnyPublisher()
-  // }
 
   // Publisher Protocol Imp:
 
@@ -47,7 +43,7 @@ public final class InfallibleValueSubject<Output>: Subject<Output, Never> {
   // Subject Protocol Imp:
 
   public final func send(_ value: Output) {
-    _serialNumber.withLock { current in
+    _version.withLock { current in
       current += 1
       _subject.send(SequentialSnapshot(value: value, serialNumber: current))
     }
@@ -63,6 +59,10 @@ public final class InfallibleValueSubject<Output>: Subject<Output, Never> {
 }
 
 extension InfallibleValueSubject {
+  public final func valuePublisher() -> InfallibleValuePublisher<Output> {
+    fatalError()
+  }
+  
   public final func takeUpdates(afterSnapshot snapshot: SequentialSnapshot<Output>) -> AnyPublisher<Output, Never> {
     _subject.drop(while: { [referenceVersion = snapshot._version] in
       $0._version <= referenceVersion

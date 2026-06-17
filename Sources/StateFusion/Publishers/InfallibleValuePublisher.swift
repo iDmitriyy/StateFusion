@@ -7,15 +7,13 @@
 
 public import Combine
 
-// InfallibleValuePublisher
-
 /// A type-erasing publisher that represents a continuous state or value stream.
 public final class InfallibleValuePublisher<Output>: Publisher {
   public typealias Failure = Never
 
   // public var valueSnapshot: Snapshot {}
 
-  // public var value: Output {}
+   public var value: Output { _getValue() }
 
   /// private
   @usableFromInline

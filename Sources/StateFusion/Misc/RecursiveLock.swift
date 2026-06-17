@@ -12,8 +12,6 @@ import Synchronization
 
 @_staticExclusiveOnly
 internal struct RecursiveLock<Value: ~Copyable>: ~Copyable {
-  
-  
   private let _lock = NSRecursiveLock()
 
   /// https://github.com/swiftlang/swift/blob/8454a3169ec99e23ae0974399f08afc4d43aa040/stdlib/public/Synchronization/Cell.swift#L18
