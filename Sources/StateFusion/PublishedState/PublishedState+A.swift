@@ -44,8 +44,8 @@ extension PublishedState {
 
   // -------
 
-  // FIXME: state.handle { | state.read { – сделать невоpможным обращение к state внутри access замыкания
-  // Если пользователь случайно сделает I/O внутри handle { }, lock будет заблокирован на всё время I/O.
+  // FIXME: state.handle { | state.read { — make it impossible to access state inside the access closure
+  // If a user accidentally does I/O inside handle { }, the lock stays held for the entire I/O duration.
 
   public func read<R>(_ closure: (borrowing StateEntity) -> sending R) -> sending R {
     withLockAccess(closure)
@@ -54,13 +54,13 @@ extension PublishedState {
   /*
    Ok. How good is my solution dealing with race conditions compared to flux / redux / TCA, and particulary for side effects
 
-   ## Рекомендации по улучшению thread safety
+   ## Thread Safety Recommendations
 
-   1. **Добавить `nonrecursive` lock вместо RecursiveLock** или опцию. Reentrancy почти всегда баг, а не intentional design. Если нужен read during mutation — вынести read до handle.
+   1. **Use a `nonrecursive` lock instead of RecursiveLock** (or offer both). Reentrancy is almost always a bug, not intentional design. If you need read-during-mutation, move the read before handle.
 
-   2. **Документировать contract:** closure в `handle { }` MUST be synchronous and fast. Не делать I/O, не вызывать async.
+   2. **Document the contract:** the closure in `handle { }` MUST be synchronous and fast. No I/O, no async calls.
 
-   3. **Для критических сквозных операций (state change + side effect атомарно)** можно добавить `handle(scheduling:)`:
+   3. **For critical atomic operations (state change + side effect together)**, add `handle(scheduling:)`:
    ```swift
    state.handle(scheduling: .async) { state in
        // state evaluated under lock, but no I/O here
@@ -70,8 +70,8 @@ extension PublishedState {
    }
    ```
 
-   4. **Глобальная проблема ordering** не решается без центрального serial executor. Для RIBs это допустимо — каждый RIB имеет свой `PublishedState`, cross-RIB коммуникация через router.
+   4. **The global ordering problem** cannot be solved without a central serial executor. For RIBs this is acceptable — each RIB has its own `PublishedState`, cross-RIB communication goes through the router.
 
-   Но базовый вопрос: **насколько критична thread-safety для RIBs + UDF сценариев?** Обычно UI-события на MainActor, а network callbacks приходят на serial queue или MainActor. На практике race condition редки. Реальная сложность — reentrancy и случайный I/O под lock.
+   But the core question is: **how critical is thread-safety for RIBs + UDF scenarios?** Usually UI events are on MainActor, and network callbacks come on a serial queue or MainActor. In practice, race conditions are rare. The real challenge is reentrancy and accidental I/O under lock.
    */
 }

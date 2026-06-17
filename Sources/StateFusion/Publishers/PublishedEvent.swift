@@ -7,14 +7,14 @@
 
 public import Combine
 
-/// Обертка, которая позволяет использовать PublishSubject как Observable.
-/// Это нужно в случаях, когда accept элементов делается только в 1 месте, а подписки делаются в нескольких местах.
-/// Так сделано для того, чтобы по символу $ в начале названия было визуально заметно в каких местах происходит
-/// передача элементов в реактивные стримы.
+/// A wrapper that lets you use a PublishSubject as an Observable.
+/// Use this when elements are accepted in only 1 place, but subscriptions happen in many.
+/// The $ prefix makes it visually clear where elements are being passed into reactive streams.
 ///
-/// - wrappedValue – когда нужно только подписываться на поток данных и вызов .accept(value) не требуется.
-/// Нужно, например, в имплементации StateTransform.
-/// - projectedValue – когда нужно за-accept'ить данные в PublishSubject. Как правило, это нужно внутри самого интерактора.
+/// - wrappedValue — use when you only need to observe a data stream and .accept(value) is not needed.
+///   For example, in a StateTransform implementation.
+/// - projectedValue — use when you need to accept values into the PublishSubject.
+///   Typically, this is needed inside the interactor itself.
 @propertyWrapper
 public final class PublishedEvent<Output> {
   public final let wrappedValue: InfalliblePublisher<Output>

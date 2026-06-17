@@ -8,7 +8,7 @@
 public import Combine
 
 // ⚠️ @iDmitriyy
-// TODO: - что будет если два раза подряд вызывать mutate {}.mutate{}? какой будет updateReason?
+// TODO: - What happens if mutate {}.mutate{} is called twice in a row? What will the updateReason be?
 
 // MARK: - Mutate operator
 

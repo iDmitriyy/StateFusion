@@ -44,7 +44,7 @@ public struct VIPOutput<VOutput, IOutput, POutput> {
 public enum VIPBinder {
   public typealias VIOutput<V, I> = (viewOutput: V, interactorOutput: I)
   
-  /// Новый вариант биндинга, без принудительной загрузки вью. Название временное, поменять после рефакторинга.
+  /// Binding variant that does not force view loading. Temporary name — rename after refactoring.
   @discardableResult
   @inlinable
   public static func bind<V, I, P>(viewController: V, interactor: I, presenter: P) -> VIPOutput<V.Output, I.Output, P.Output>
@@ -58,7 +58,7 @@ public enum VIPBinder {
     return VIPOutput(viewOutput: viewOutput, interactorOutput: interactorOutput, presenterOutput: presenterOutput)
   }
 
-  /// Вариант биндинга, когда в модуле отсутствует Preseneter
+  /// Binding variant for modules without a Presenter
   @discardableResult
   @inlinable
   public static func bind<V, I>(viewController: V, interactor: I) -> VIOutput<V.Output, I.Output>
