@@ -82,7 +82,7 @@ public struct PublishedState<StateEntity: Sendable>: ~Copyable, Sendable {
     _stateImpObject.finishPublisher()
   }
 
-  public func publisher() -> CurrentValuePublisher<StateEntity> {
+  public func publisher() -> InfallibleValuePublisher<StateEntity> {
     _stateImpObject.publisher()
   }
 
@@ -135,7 +135,7 @@ extension PublishedState where StateEntity: AnyObject {
 
 @usableFromInline
 internal final class _PublishedState<StateEntity: Sendable>: @unchecked Sendable {
-  private weak var _shared_publisher: CurrentValuePublisher<StateEntity>? // FIXME: - is it safe and no retain cycle?
+  private weak var _shared_publisher: InfallibleValuePublisher<StateEntity>? // FIXME: - is it safe and no retain cycle?
 
   @usableFromInline
   /* private */ internal let _subject: CurrentValueSubject<StateEntity, Never>
@@ -157,14 +157,14 @@ internal final class _PublishedState<StateEntity: Sendable>: @unchecked Sendable
     _subject.send(completion: .finished)
   }
 
-  fileprivate func publisher() -> CurrentValuePublisher<StateEntity> {
+  fileprivate func publisher() -> InfallibleValuePublisher<StateEntity> {
     _lock.lock(); defer { _lock.unlock() }
 
-    let publisher: CurrentValuePublisher<StateEntity>
+    let publisher: InfallibleValuePublisher<StateEntity>
     if let _publisher = _shared_publisher {
       publisher = _publisher
     } else {
-      publisher = CurrentValuePublisher(retained_unverifiedValuePublisher: _subject, getCurrentValue: { [publishedState = self] in
+      publisher = InfallibleValuePublisher(retained_unverifiedValuePublisher: _subject, getCurrentValue: { [publishedState = self] in
         publishedState.withLockAccess { stateEntity in stateEntity }
       })
       _shared_publisher = publisher
@@ -267,14 +267,18 @@ extension _PublishedState {
 }
 
 extension _PublishedState {
-  public func enumerableStatePublisher<EnumerableState, DataState>() -> CurrentValuePublisher<EnumerableState>
+  public func enumerableStatePublisher<EnumerableState, DataState>() -> InfallibleValuePublisher<EnumerableState>
     where StateEntity == StateCompound<EnumerableState, DataState> {
     fatalError()
   }
 
   // FIXME: - implement
-  public func dataStatePublisher<EnumerableState, DataState>() -> CurrentValuePublisher<DataState>
+  public func dataStatePublisher<EnumerableState, DataState>() -> InfallibleValuePublisher<DataState>
     where StateEntity == StateCompound<EnumerableState, DataState> {
     fatalError()
   }
+}
+enum StateChangeKind {
+  case serialAsync(priority: TaskPriority)
+  case sync
 }

@@ -1,5 +1,5 @@
 //
-//  CurrentValuePublisher.swift
+//  InfallibleValuePublisher.swift
 //  StateFusion
 //
 //  Created by Dmitriy Ignatyev on 13.06.2026.
@@ -7,8 +7,10 @@
 
 public import Combine
 
+// InfallibleValuePublisher
+
 /// A type-erasing publisher that represents a continuous state or value stream.
-public final class CurrentValuePublisher<Output>: Publisher {
+public final class InfallibleValuePublisher<Output>: Publisher {
   public typealias Failure = Never
 
   // public var valueSnapshot: Snapshot {}
@@ -40,14 +42,14 @@ public final class CurrentValuePublisher<Output>: Publisher {
   }
 }
 
-extension CurrentValuePublisher {
+extension InfallibleValuePublisher {
   public convenience init(_ subject: CurrentValueSubject<Output, Never>) {
     self.init(retained_unverifiedValuePublisher: subject,
               getCurrentValue: { [unowned subject] in subject.value })
   }
 }
 
-extension CurrentValuePublisher {
+extension InfallibleValuePublisher {
   @inlinable
   public final func takeUpdates(afterSnapshot snapshot: Snapshot) -> AnyPublisher<Output, Never> {
     _ = snapshot
@@ -59,7 +61,7 @@ extension CurrentValuePublisher {
 
 // MARK: - Snapshot
 
-extension CurrentValuePublisher {
+extension InfallibleValuePublisher {
   /// An opaque token representing an atomic state snapshot bundled with its chronological version.
   ///
   /// ### The Synchronization Problem
