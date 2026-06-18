@@ -138,13 +138,13 @@ internal final class _PublishedState<StateEntity: Sendable>: @unchecked Sendable
   private weak var _shared_publisher: InfallibleValuePublisher<StateEntity>? // FIXME: - is it safe and no retain cycle?
 
   @usableFromInline
-  /* private */ internal let _subject: CurrentValueSubject<StateEntity, Never>
+  /* private */ internal let _private_use_only_subject: CurrentValueSubject<StateEntity, Never>
 
   @usableFromInline
   /* private */ internal let _lock = NSRecursiveLock()
 
   fileprivate init(_ initialValue: StateEntity) {
-    _subject = CurrentValueSubject(initialValue)
+    _private_use_only_subject = CurrentValueSubject(initialValue)
 
     // TODO: - `publisher` subscriptions can retain underlying _subject. This should be tracked and logged as a warning
     // that once `~Copyable PublishedState` shell deinited, the subject also
@@ -154,7 +154,7 @@ internal final class _PublishedState<StateEntity: Sendable>: @unchecked Sendable
 
   fileprivate final func finishPublisher() { // TODO: - need better name
     _lock.lock(); defer { _lock.unlock() }
-    _subject.send(completion: .finished)
+    _private_use_only_subject.send(completion: .finished)
   }
 
   fileprivate func publisher() -> InfallibleValuePublisher<StateEntity> {
@@ -164,7 +164,7 @@ internal final class _PublishedState<StateEntity: Sendable>: @unchecked Sendable
     if let _publisher = _shared_publisher {
       publisher = _publisher
     } else {
-      publisher = InfallibleValuePublisher(retained_unverifiedValuePublisher: _subject, getCurrentValue: { [publishedState = self] in
+      publisher = InfallibleValuePublisher(retained_unverifiedValuePublisher: _private_use_only_subject, getCurrentValue: { [publishedState = self] in
         publishedState.withLockAccess { stateEntity in stateEntity }
       })
       _shared_publisher = publisher
@@ -179,7 +179,7 @@ internal final class _PublishedState<StateEntity: Sendable>: @unchecked Sendable
   internal final func withLockAccess<R, E>(_ access: (borrowing StateEntity) throws(E) -> sending R)
     throws(E) -> sending R {
     _lock.lock(); defer { _lock.unlock() }
-    return try access(_subject.value)
+    return try access(_private_use_only_subject.value)
   }
 
   /// Provides mutable access to the state, updating the stored state **only** when a mutation actually occurred.
@@ -211,13 +211,13 @@ internal final class _PublishedState<StateEntity: Sendable>: @unchecked Sendable
     -> sending R {
     _lock.lock(); defer { _lock.unlock() }
 
-    var stateEntity = _subject.value
+    var stateEntity = _private_use_only_subject.value
     var accessHandle = GenericStateAccessHandle(mutableRef: _MutableRef(&stateEntity))
     let result = access(&accessHandle)
     let isMutablyAccessed = accessHandle.isMutablyAccessed
 
     if isMutablyAccessed {
-      _subject.value = stateEntity
+      _private_use_only_subject.value = stateEntity
     }
 
     return result
@@ -233,14 +233,14 @@ extension _PublishedState {
     where StateEntity == StateCompound<EnumerableState, DataState> {
     _lock.lock(); defer { _lock.unlock() }
 
-    var stateCompound = _subject.value
+    var stateCompound = _private_use_only_subject.value
     var accessHandle = StateCompoundAccessHandle(mutableRef: _MutableRef(&stateCompound))
     let result = try access(&accessHandle)
     let emissionReason = accessHandle.finalizeAccess()
 
     let isMutablyAccessed = emissionReason != nil
     if isMutablyAccessed {
-      _subject.value = stateCompound
+      _private_use_only_subject.value = stateCompound
     }
 
     return result
@@ -252,14 +252,14 @@ extension _PublishedState {
     where StateEntity == StateCompound<EnumerableState, DataState> {
     _lock.lock(); defer { _lock.unlock() }
 
-    var stateCompound = _subject.value
+    var stateCompound = _private_use_only_subject.value
     var accessHandle = StateCompoundDataPropertyAccessHandle(mutableRef: _MutableRef(&stateCompound))
     let result = try access(&accessHandle)
     let emissionReason = accessHandle.finalizeAccess()
 
     let isMutablyAccessed = emissionReason != nil
     if isMutablyAccessed {
-      _subject.value = stateCompound
+      _private_use_only_subject.value = stateCompound
     }
 
     return result
