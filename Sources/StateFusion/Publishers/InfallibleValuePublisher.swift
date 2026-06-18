@@ -100,25 +100,3 @@ extension InfallibleValuePublisher {
   /// ```
   public typealias Snapshot = SequentialSnapshot<Output>
 }
-
-public struct SequentialSnapshot<T> {
-  public let value: T
-  
-  /// A monotonically increasing identifier for this snapshot version.
-  @inlinable @inline(always)
-  public var version: some Comparable { _version }
-  
-  /// serial number
-  @usableFromInline
-  internal let _version: UInt64
-  
-  internal init(initial value: T) {
-    self.value = value
-    self._version = 0
-  }
-
-  internal init(value: T, serialNumber: UInt64) {
-    self.value = value
-    self._version = serialNumber
-  }
-}

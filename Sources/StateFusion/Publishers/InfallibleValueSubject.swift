@@ -14,7 +14,7 @@ public struct OwnedInfallibleValueSubject<Output>: ~Copyable {}
 
 public final class InfallibleValueSubject<Output>: Subject<Output, Never> {
   internal let _subject: CurrentValueSubject<SequentialSnapshot<Output>, Never>
-  private let _version: RecursiveLock<UInt64>
+  private let _version: RecursiveLock<UInt32>
 
   public final var valueSnapshot: SequentialSnapshot<Output> {
     _subject.value
@@ -45,7 +45,7 @@ public final class InfallibleValueSubject<Output>: Subject<Output, Never> {
   public final func send(_ value: Output) {
     _version.withLock { current in
       current += 1
-      _subject.send(SequentialSnapshot(value: value, serialNumber: current))
+      _subject.send(SequentialSnapshot(value: value, version: current))
     }
   }
 
