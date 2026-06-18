@@ -72,27 +72,39 @@ extension InsulatedValueRelay {
 
 
 
-final class CurrentValueRelay<Output>: Publisher, Sendable {
-  typealias Failure = Never
-  
-  private let _data: RecursiveLock<(currentValue: Output, version: UInt32, subscriptions: ContiguousArray<Subscription>)>
 
-  public final var value: Output {
-    get { _data.withLock { $0.currentValue } }
+
+
+
+
+internal final class InsulatedVersionedValueSubject<Value>: Publisher, Sendable {
+  typealias Failure = Never
+  typealias Output = SequentialSnapshot<Value>
+  
+  private let _data: RecursiveLock<(value: Value, version: UInt32, subscriptions: ContiguousArray<Subscription>)>
+
+  public final var value: Value {
+    get { _data.withLock { $0.value } }
     // @available(*, unavailable, message: "This is a get-only subscript. To mutate values for key use `withExclusiveAccess(:)` function")
     // set {  } // – unavailable, use mutating function
   }
   
-  public final var valueSnapshot: SequentialSnapshot<Output> {
-    _subject.value
+  public final var valueSnapshot: SequentialSnapshot<Value> {
+    get { _data.withLock { SequentialSnapshot(value: $0.value, version: $0.version) } }
+    
   }
 
-  init(_ value: Output) {
+  init(_ value: Value) {
     _data = RecursiveLock((value, 0, ContiguousArray()))
+    // CombineIdentifier(self)
   }
 
   deinit {
     // TBD
+  }
+  
+  internal func terminateWithCompletion() {
+    // send(completion: .finished)
   }
 
   func receive(subscriber: some Subscriber<Output, Never>) {
@@ -103,14 +115,20 @@ final class CurrentValueRelay<Output>: Publisher, Sendable {
     subscriber.receive(subscription: subscription)
   }
 
-  func send(_ value: Output) {
+  func send(_ value: Value) {
     _data.withLock {
-      $0.currentValue = value
+      $0.version += 1
+      $0.value = value
       
       for subscription in $0.subscriptions {
         subscription.receive(value)
       }
     }
+  }
+  
+  internal final func withMutableAccess<R>(_ access: (inout GenericStateAccessHandle<Value>) -> sending R)
+  -> sending R {
+    
   }
 
   private func remove(_ subscription: Subscription) {
@@ -121,15 +139,30 @@ final class CurrentValueRelay<Output>: Publisher, Sendable {
   }
 }
 
-extension CurrentValueRelay {
+extension InsulatedVersionedValueSubject {
+  public final func valuePublisher() -> InfallibleValuePublisher<Value> {
+    fatalError()
+  }
+  
+  public final func takeUpdates(afterSnapshot snapshot: consuming SequentialSnapshot<Value>) -> AnyPublisher<Value, Never> {
+    self.drop(while: { [referenceVersion = snapshot._version] in
+      $0._version <= referenceVersion
+    })
+    .map { $0.value }
+    .eraseToAnyPublisher()
+    // FIXME: + share
+  }
+}
+
+extension InsulatedVersionedValueSubject {
   fileprivate final class Subscription: Combine.Subscription, Equatable {
     private var demand = Subscribers.Demand.none
     private var downstream: (any Subscriber<Output, Never>)?
     private let lock: os_unfair_lock_t
     private var receivedLastValue = false
-    private var upstream: CurrentValueRelay?
+    private var upstream: InsulatedVersionedValueSubject?
 
-    init(upstream: CurrentValueRelay, downstream: any Subscriber<Output, Never>) {
+    init(upstream: InsulatedVersionedValueSubject, downstream: any Subscriber<Output, Never>) {
       self.upstream = upstream
       self.downstream = downstream
       self.lock = os_unfair_lock_t.allocate(capacity: 1)
@@ -149,7 +182,7 @@ extension CurrentValueRelay {
       }
     }
 
-    func receive(_ value: Output) {
+    func receive(_ value: Value) {
       self.lock.lock()
 
       guard let downstream else {
@@ -190,10 +223,7 @@ extension CurrentValueRelay {
 
       self.demand += demand
 
-      guard
-        !self.receivedLastValue,
-        let value = self.upstream?.value
-      else {
+      guard !self.receivedLastValue, let value = self.upstream?.value else {
         self.lock.unlock()
         return
       }
@@ -221,8 +251,6 @@ extension CurrentValueRelay {
     }
   }
 }
-
-
 
 
 

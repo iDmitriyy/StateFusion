@@ -63,7 +63,7 @@ extension InfallibleValueSubject {
     fatalError()
   }
   
-  public final func takeUpdates(afterSnapshot snapshot: SequentialSnapshot<Output>) -> AnyPublisher<Output, Never> {
+  public final func takeUpdates(afterSnapshot snapshot: consuming SequentialSnapshot<Output>) -> AnyPublisher<Output, Never> {
     _subject.drop(while: { [referenceVersion = snapshot._version] in
       $0._version <= referenceVersion
     })

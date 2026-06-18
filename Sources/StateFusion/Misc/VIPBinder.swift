@@ -15,8 +15,8 @@ public protocol IOTransformer: AnyObject {
 //===-------------------------------------------------------------------------------------------------------------------===//
 
 public protocol BindableView {
-  associatedtype Input
-  associatedtype Output
+  associatedtype Input // : ~Copyable
+  associatedtype Output // : ~Copyable
 
   func getOutput() -> Output
   func bindWith(input: Input)

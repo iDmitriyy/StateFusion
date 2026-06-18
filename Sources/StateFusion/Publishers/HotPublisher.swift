@@ -34,3 +34,7 @@ final class HotPublisher<T> {
         subject.eraseToAnyPublisher()
     }
 }
+
+extension Publishers {
+  struct SingleElement {}
+}

@@ -6,23 +6,67 @@
 //
 
 public struct SequentialSnapshot<T> {
+  // TODO: add some ID/sourceIdentity to check that snapshot was consumed by the same Subject/Relay that produced it.
   public let value: T
-  
+
   /// A monotonically increasing identifier for this snapshot version.
   @inlinable @inline(always)
-  public var version: some Comparable { _version }
-  
+  public var version: some Comparable {
+    _version
+  }
+
   /// serial number
   @usableFromInline
   internal let _version: UInt32
-  
+
   internal init(initial value: T) {
     self.value = value
-    self._version = 0
+    _version = 0
   }
 
   internal init(value: T, version: UInt32) {
     self.value = value
-    self._version = version
+    _version = version
   }
+}
+
+public struct UniqueSequentialSnapshot<T>: ~Copyable {
+  // TODO: add some ID/sourceIdentity to check that snapshot was consumed by the same Subject/Relay that produced it.
+  public let value: T
+
+  /// A monotonically increasing identifier for this snapshot version.
+  @inlinable @inline(always)
+  public var version: some Comparable {
+    _version
+  }
+
+  /// serial number
+  @usableFromInline
+  internal let _version: UInt32
+
+  internal init(initial value: T) {
+    self.value = value
+    _version = 0
+  }
+
+  internal init(value: T, version: UInt32) {
+    self.value = value
+    _version = version
+  }
+}
+
+import Synchronization
+
+public struct ResourceID: Sendable {
+  // Размещаем атомик внутри Sendable класса
+  // Начинаем с 0 или 1
+
+  private let rawValue: Int
+
+  public init() {
+    let currentID = Self.currentID.wrappingAdd(1, ordering: .relaxed).oldValue
+    rawValue = currentID
+  }
+
+  private static let currentID = Atomic<Int>(0)
 }
