@@ -5,8 +5,9 @@
 //  Created by Dmitriy Ignatyev on 18.06.2026.
 //
 
+import Combine
+
 public struct SequentialSnapshot<T> {
-  // TODO: add some ID/sourceIdentity to check that snapshot was consumed by the same Subject/Relay that produced it.
   public let value: T
 
   /// A monotonically increasing identifier for this snapshot version.
@@ -18,11 +19,14 @@ public struct SequentialSnapshot<T> {
   /// serial number
   @usableFromInline
   internal let _version: UInt32
+  
+  /// ID/sourceIdentity to check that snapshot was consumed by the same Subject/Relay that produced it.
+  internal let ownerID: CombineIdentifier
 
-  internal init(initial value: T) {
-    self.value = value
-    _version = 0
-  }
+//  internal init(initial value: T) {
+//    self.value = value
+//    _version = 0
+//  }
 
   internal init(value: T, version: UInt32) {
     self.value = value

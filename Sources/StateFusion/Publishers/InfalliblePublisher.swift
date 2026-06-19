@@ -18,3 +18,5 @@ public typealias InfalliblePublisher<Output> = AnyPublisher<Output, Never>
 // -> PassthroughPublisher -> SignalPublisher | InfallibleEventStream
 
 // // UIEventStream : UIEventPublisher
+
+// InfallibleValuePublisher

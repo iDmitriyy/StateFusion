@@ -9,7 +9,7 @@ public import Combine
 
 public final class InsulatedValueRelay<Output>: Subject<Output, Never> { // | Insulated Transactional
   internal let _subject: CurrentValueSubject<SequentialSnapshot<Output>, Never>
-  private let _version: RecursiveLock<UInt64>
+  private let _version: RecursiveLock<UInt32>
 
   public final var valueSnapshot: SequentialSnapshot<Output> {
     _subject.value

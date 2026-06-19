@@ -44,7 +44,9 @@ public final class InfallibleValueSubjectNew<Output>: Subject, @unchecked Sendab
 
   // MARK: Publisher
 
-  public func receive<S: Subscriber>(subscriber: S) where S.Failure == Never, S.Input == Output {
+  public func receive<S: Subscriber>(subscriber: S) where S.Input == Output, S.Failure == Never {
+    // if isCompleted { subscriber.receive(completion: ) }
+
     let conduit = Conduit(upstream: self, downstream: subscriber)
     _lock.lock()
     _conduits.append(conduit)
@@ -79,8 +81,9 @@ public final class InfallibleValueSubjectNew<Output>: Subject, @unchecked Sendab
     }
   }
 
-  public func send(subscription: any Subscription) {
+  public func send(subscription _: any Subscription) {
     // No-op: conduits are managed via receive(subscriber:)
+    // FIXME: do it
   }
 
   // MARK: Atomic Mutation
@@ -347,15 +350,13 @@ extension InfallibleValueRelayNew {
     private var _downstream: (any Subscriber<Output, Never>)?
     private weak var _upstream: InfallibleValueRelayNew?
 
-    init(
-      upstream: InfallibleValueRelayNew,
-      downstream: any Subscriber<Output, Never>,
-    ) {
+    init(upstream: InfallibleValueRelayNew,
+         downstream: any Subscriber<Output, Never>) {
       _upstream = upstream
       _downstream = downstream
     }
 
-    func cancel() {
+    final func cancel() {
       _lock.lock()
       _downstream = nil
       let upstream = _upstream
@@ -363,7 +364,7 @@ extension InfallibleValueRelayNew {
       upstream?.remove(self)
     }
 
-    func receive(_ value: Output) {
+    final func receive(_ value: Output) {
       _lock.lock()
       guard let downstream = _downstream else {
         _lock.unlock()
@@ -390,7 +391,7 @@ extension InfallibleValueRelayNew {
       }
     }
 
-    func receive(completion: Subscribers.Completion<Never>) {
+    final func receive(completion: Subscribers.Completion<Never>) {
       _lock.lock()
       guard let downstream = _downstream else {
         _lock.unlock()
@@ -401,7 +402,7 @@ extension InfallibleValueRelayNew {
       downstream.receive(completion: completion)
     }
 
-    func request(_ demand: Subscribers.Demand) {
+    final func request(_ demand: Subscribers.Demand) {
       precondition(demand > 0, "Demand must be greater than zero")
 
       _lock.lock()

@@ -7,6 +7,15 @@
 
 import Combine
 
+enum Owning<T: AnyObject> {
+  case retained(T)
+  case borrowed(Weak<T>)
+}
+
+struct Weak<T: AnyObject> {
+  weak let instance: T?
+}
+
 extension Publisher where Failure == Never {
   // MARK: -  _filterBy
 
