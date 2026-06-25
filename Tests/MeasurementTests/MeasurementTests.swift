@@ -8,7 +8,7 @@
 import StateFusion
 import Testing
 
-@available(macOS 26.0, *)
+@available(anyAppleOS 26.0, *)
 struct DataState_Example {
   var number: Int = 0
   var title: String = "12345678901234567890"
@@ -22,9 +22,33 @@ struct PlaygroundTests {
   let outer: Int = 1000
   let inner: Int = 1000
   
+  @Test func `RecursiveLock Access`() {
+    if #available(macOS 26.0, *) {
+      let lock = RecursiveLock(DataState_Example())
+      
+      let (_, access1) = performMeasuredAction(count: outer) {
+        for _ in 1...inner {
+          lock.withLock {
+            $0.number += 1
+          }
+        }
+      }
+      
+      let (_, access3) = performMeasuredAction(count: outer) {
+        for _ in 1...inner {
+          lock.withLock3 {
+            $0.pointee.number += 1
+          }
+        }
+      }
+      
+      print("___", access1, access3)
+    }
+  }
+  
   @Test func `PublishedState withLockAccess RichState`() {
     if #available(macOS 26.0, *) {
-      let richState = RichState(state: 0, data: DataState_Example())
+      let richState = StateCompound(state: 0, data: DataState_Example())
       let publishedState = PublishedState(richState)
 
       let (_, withLockAccess) = performMeasuredAction(count: outer) {
@@ -45,7 +69,7 @@ struct PlaygroundTests {
       
       let (_, withLockMutableAccessWrite) = performMeasuredAction(count: outer) {
         for _ in 1...inner {
-          publishedState.withLockMutableAccessRichState {
+          publishedState.withLockMutableAccessStateCompound {
             $0.data.number += 1
           }
         }

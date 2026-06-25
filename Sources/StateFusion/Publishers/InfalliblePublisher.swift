@@ -9,7 +9,7 @@ public import Combine
 
 //public typealias EventPublisher<Output> = AnyPublisher<Output, Never>
 
-public typealias InfalliblePublisher<Output> = AnyPublisher<Output, Never>
+public typealias InfalliblePublisher<Output> = AnyPublisher<Output, Never> // ?? Publisher<Output, Never>
 
 // Driver:
 // -> CurrentValuePublisher -> DriverPublisher | InfallibleDataStream

@@ -11,7 +11,7 @@ import Synchronization
 // MARK: - RecursiveLock
 
 @_staticExclusiveOnly
-internal struct RecursiveLock<Value: ~Copyable>: ~Copyable {
+public struct RecursiveLock<Value: ~Copyable>: ~Copyable {
   private let _lock = NSRecursiveLock()
 
   /// https://github.com/swiftlang/swift/blob/8454a3169ec99e23ae0974399f08afc4d43aa040/stdlib/public/Synchronization/Cell.swift#L18
@@ -25,11 +25,35 @@ internal struct RecursiveLock<Value: ~Copyable>: ~Copyable {
 extension RecursiveLock: @unchecked Sendable where Value: ~Copyable {}
 
 extension RecursiveLock where Value: ~Copyable {
-  internal borrowing func withLock<Result: ~Copyable, E: Error>(
+  public borrowing func withLock<Result: ~Copyable, E: Error>(
     _ body: (inout sending Value) throws(E) -> sending Result,
   ) throws(E) -> sending Result {
     _lock.lock(); defer { _lock.unlock() }
 
     return try unsafe body(&value._address.pointee)
   }
+  
+//  internal borrowing func withLock2<Result: ~Copyable, E: Error>(
+//    _ body: (inout _MutableRef<Value>) throws(E) -> sending Result,
+//  ) throws(E) -> sending Result {
+//    _lock.lock(); defer { _lock.unlock() }
+//
+//    var ref = _MutableRef(&value._address.pointee)
+//    return try body(&ref)
+//  }
+  
+  public borrowing func withLock3<Result: ~Copyable, E: Error>(
+    _ body: (UnsafeMutablePointer<Value>) throws(E) -> sending Result,
+  ) throws(E) -> sending Result {
+    _lock.lock(); defer { _lock.unlock() }
+    return try body(value._address)
+  }
 }
+
+//internal final class RecursiveLock2<Value: ~Copyable>: @unchecked Sendable {
+//  private let _lock = NSRecursiveLock()
+//}
+//
+//internal final class RecursiveLock3<Value: ~Copyable>: @unchecked Sendable {
+//
+//}

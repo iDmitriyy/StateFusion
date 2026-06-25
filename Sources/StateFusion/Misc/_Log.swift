@@ -78,4 +78,6 @@ extension StateFusionLogEntry {
 internal enum InternalErrorCode: Int {
   case logger = 0
   case unexpectedNilObject = 1
+  
+  case publishedStateRetained = 20
 }

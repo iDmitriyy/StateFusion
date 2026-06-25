@@ -80,6 +80,13 @@ public struct PublishedState<StateEntity: Sendable>: ~Copyable, Sendable {
 
   deinit {
     _stateImpObject.finishPublisher()
+    
+    Task { [weak _stateImpObject] in
+      if _stateImpObject != nil {
+        log(.warning, StateFusionLogEntry(code: .publishedStateRetained,
+                                          message: "\(Self.self) underlying object outlived owner."))
+      }
+    }
   }
 
   public func publisher() -> InfallibleValuePublisher<StateEntity> {
@@ -164,8 +171,11 @@ internal final class _PublishedState<StateEntity: Sendable>: @unchecked Sendable
     if let _publisher = _shared_publisher {
       publisher = _publisher
     } else {
-      publisher = InfallibleValuePublisher(retained_unverifiedValuePublisher: _private_use_only_subject, getCurrentValue: { [publishedState = self] in
-        publishedState.withLockAccess { stateEntity in stateEntity }
+      publisher = InfallibleValuePublisher(retained_unverifiedValuePublisher: _private_use_only_subject, getCurrentValueSnapshot: { [publishedState = self] in
+        publishedState.withLockAccess { stateEntity in
+          // FIXME: - Snapshot
+          SequentialSnapshot(value: stateEntity, version: 0, sourceID: SourceID())
+        }
       })
       _shared_publisher = publisher
     }

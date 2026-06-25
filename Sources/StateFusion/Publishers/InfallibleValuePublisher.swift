@@ -11,13 +11,9 @@ public import Combine
 public final class InfallibleValuePublisher<Output>: Publisher {
   public typealias Failure = Never
 
-  // public var valueSnapshot: Snapshot {}
-
-   public var value: Output { _getValue() }
-
   /// private
   @usableFromInline
-  /* private */ internal let _getValue: () -> Output
+  /* private */ internal let _getCurrentValueSnapshot: () -> SequentialSnapshot<Output>
 
   /// private
   @usableFromInline
@@ -25,13 +21,13 @@ public final class InfallibleValuePublisher<Output>: Publisher {
 
   @inlinable
   internal init<P: Publisher>(retained_unverifiedValuePublisher base: P,
-                              getCurrentValue: @escaping () -> Output)
+                              getCurrentValueSnapshot: @escaping () -> SequentialSnapshot<Output>)
     where P.Output == Output, P.Failure == Never {
     _subscribeClosure = { [base] subscriber in
       base.receive(subscriber: subscriber)
     }
 
-    _getValue = getCurrentValue
+    _getCurrentValueSnapshot = getCurrentValueSnapshot
   }
 
   @inlinable
@@ -41,15 +37,8 @@ public final class InfallibleValuePublisher<Output>: Publisher {
 }
 
 extension InfallibleValuePublisher {
-  public convenience init(_ subject: CurrentValueSubject<Output, Never>) {
-    self.init(retained_unverifiedValuePublisher: subject,
-              getCurrentValue: { [unowned subject] in subject.value })
-  }
-}
-
-extension InfallibleValuePublisher {
   @inlinable
-  public final func takeUpdates(afterSnapshot snapshot: Snapshot) -> AnyPublisher<Output, Never> {
+  public final func takeUpdates(afterSnapshot snapshot: SequentialSnapshot<Output>) -> AnyPublisher<Output, Never> {
     _ = snapshot
     fatalError()
   }
@@ -57,46 +46,30 @@ extension InfallibleValuePublisher {
 
 //===-------------------------------------------------------------------------------------------------------------------===//
 
-// MARK: - Snapshot
+// MARK: - CurrentValuePublisher
 
-extension InfallibleValuePublisher {
-  /// An opaque token representing an atomic state snapshot bundled with its chronological version.
-  ///
-  /// ### The Synchronization Problem
-  /// A common synchronization bug occurs when establishing a reactive connection in two steps:
-  /// 1. **Phase A (Synchronous):** You read the current state to bootstrap an object.
-  /// 2. **Phase B (Asynchronous):** You attach a subscription to listen for future updates.
-  ///
-  /// Because a time gap exists between Phase A and Phase B, a concurrent thread can mutate the state
-  /// right before the subscription is attached. A standard publisher will either deliver a duplicate
-  /// old value (causing redundant processing) or drop the critical mid-gap update if you blindly apply `.dropFirst()`.
-  ///
-  /// ### Solution
-  /// The `Snapshot` token tracks the exact timeline version of the state when it was read. Passing this
-  /// token into ``CurrentValuePublisher/takeUpdates(afterSnapshot:)`` bridges the time gap safely:
-  /// - If a concurrent mutation happened during the gap, the updated value is delivered immediately.
-  /// - If no mutations occurred, the initial subscription emission is discarded silently to prevent duplicates.
-  ///
-  /// ### Example Usage
-  ///
-  /// ```swift
-  /// final class DataConsumer {
-  ///   private let engine: CoreEngine
-  ///   private let bag = CancellationBag()
-  ///
-  ///   init(source: CurrentValuePublisher<Configuration>) {
-  ///     // Phase A: Capture current state safely for synchronous bootstrap
-  ///     let configSnapshot = source.snapshot
-  ///     engine = CoreEngine(configuration: configSnapshot.value)
-  ///
-  ///     // Phase B: Pass the snapshot to guarantee data consistency across the gap
-  ///     source.takeUpdates(afterSnapshot: configSnapshot)
-  ///       .sink { [unowned self] updatedConfig in
-  ///         self.engine.hotReload(updatedConfig)
-  ///       }
-  ///       .store(in: bag)
-  ///   }
-  /// }
-  /// ```
-  public typealias Snapshot = SequentialSnapshot<Output>
+public struct CurrentValuePublisher<Output, Failure: Error>: Publisher {
+  
+  /// private
+  @usableFromInline
+  /* private */ internal let _subscribeClosure: (any Subscriber<Output, Failure>) -> Void
+  
+  internal init<P: Publisher>(retained_unverifiedValuePublisher base: P,
+                              getCurrentValue: @escaping () -> Output)
+    where P.Output == Output, P.Failure == Failure {
+    _subscribeClosure = { [base] subscriber in
+      base.receive(subscriber: subscriber)
+    }
+  }
+  
+  public func receive<S: Subscriber>(subscriber: S) where S.Input == Output, S.Failure == Failure {
+    _subscribeClosure(subscriber)
+  }
+}
+
+extension CurrentValuePublisher {
+  public init(_ subject: CurrentValueSubject<Output, Failure>) {
+    self.init(retained_unverifiedValuePublisher: subject,
+              getCurrentValue: { [unowned subject] in subject.value })
+  }
 }

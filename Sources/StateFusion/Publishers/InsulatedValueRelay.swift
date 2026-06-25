@@ -7,102 +7,94 @@
 
 public import Combine
 
-public final class InsulatedValueRelay<Output>: Subject<Output, Never> { // | Insulated Transactional
-  internal let _subject: CurrentValueSubject<SequentialSnapshot<Output>, Never>
-  private let _version: RecursiveLock<UInt32>
+//public final class InsulatedValueRelay<Output>: Subject<Output, Never> { // | Insulated Transactional
+//  internal let _subject: CurrentValueSubject<SequentialSnapshot<Output>, Never>
+//  private let _version: RecursiveLock<UInt32>
+//
+//  public final var valueSnapshot: SequentialSnapshot<Output> {
+//    _subject.value
+//  }
+//
+//  public final var value: Output {
+//    _subject.value.value
+//  }
+//
+//  public init(_ value: Output) {
+//    let initial = SequentialSnapshot(initial: value)
+//    _version = RecursiveLock(initial._version)
+//    _subject = CurrentValueSubject(initial)
+//  }
+//
+//  // Publisher Protocol Imp:
+//
+//  public final func receive<S: Subscriber>(subscriber: S) where S.Failure == Never, S.Input == Output {
+//    _subject
+//      .map { snapshot in snapshot.value }
+//      .receive(subscriber: subscriber)
+//  }
+//
+//  // Subject Protocol Imp:
+//
+//  public final func send(_ value: Output) {
+//    _version.withLock { current in
+//      current += 1
+//      _subject.send(SequentialSnapshot(value: value, version: current))
+//    }
+//  }
+//
+//  public final func send(completion: Subscribers.Completion<Failure>) {
+//    _subject.send(completion: completion)
+//  }
+//
+//  public final func send(subscription: any Subscription) {
+//    _subject.send(subscription: subscription)
+//  }
+//}
+//
+//extension InsulatedValueRelay {
+//  public final func valuePublisher() -> InfallibleValuePublisher<Output> {
+//    fatalError()
+//  }
+//
+//  public final func takeUpdates(afterSnapshot snapshot: SequentialSnapshot<Output>) -> AnyPublisher<Output, Never> {
+//    _subject
+//      .drop(while: { [referenceVersion = snapshot._version] in
+//        $0._version <= referenceVersion
+//      })
+//      .map { $0.value }
+//      .eraseToAnyPublisher()
+//    // FIXME: + share
+//  }
+//}
 
-  public final var valueSnapshot: SequentialSnapshot<Output> {
-    _subject.value
-  }
+//===-------------------------------------------------------------------------------------------------------------------===//
+// MARK: - Insulated VersionedValue Relay
 
-  public final var value: Output {
-    _subject.value.value
-  }
+// ~Copyable
 
-  // https://github.com/ReactiveX/RxSwift/blob/132aea4f236ccadc51590b38af0357a331d51fa2/RxSwift/Rx.swift#L71
-
-  public init(_ value: Output) {
-    let initial = SequentialSnapshot(initial: value)
-    _version = RecursiveLock(initial._version)
-    _subject = CurrentValueSubject(initial)
-  }
-
-  // Publisher Protocol Imp:
-
-  public final func receive<S: Subscriber>(subscriber: S) where S.Failure == Never, S.Input == Output {
-    _subject
-      .map { snapshot in snapshot.value }
-      .receive(subscriber: subscriber)
-  }
-
-  // Subject Protocol Imp:
-
-  public final func send(_ value: Output) {
-    _version.withLock { current in
-      current += 1
-      _subject.send(SequentialSnapshot(value: value, serialNumber: current))
-    }
-  }
-
-  public final func send(completion: Subscribers.Completion<Failure>) {
-    _subject.send(completion: completion)
-  }
-
-  public final func send(subscription: any Subscription) {
-    _subject.send(subscription: subscription)
-  }
-}
-
-extension InsulatedValueRelay {
-  public final func valuePublisher() -> InfallibleValuePublisher<Output> {
-    fatalError()
-  }
-  
-  public final func takeUpdates(afterSnapshot snapshot: SequentialSnapshot<Output>) -> AnyPublisher<Output, Never> {
-    _subject.drop(while: { [referenceVersion = snapshot._version] in
-      $0._version <= referenceVersion
-    })
-    .map { $0.value }
-    .eraseToAnyPublisher()
-    // FIXME: + share
-  }
-}
-
-
-
-
-
-
-
-
-
-
-internal final class InsulatedVersionedValueSubject<Value>: Publisher, Sendable {
+internal final class InsulatedVersionedValueRelay<Value>: Publisher, Sendable {
   typealias Failure = Never
   typealias Output = SequentialSnapshot<Value>
-  
-  private let _data: RecursiveLock<(value: Value, version: UInt32, subscriptions: ContiguousArray<Subscription>)>
 
-  public final var value: Value {
-    get { _data.withLock { $0.value } }
-    // @available(*, unavailable, message: "This is a get-only subscript. To mutate values for key use `withExclusiveAccess(:)` function")
-    // set {  } // – unavailable, use mutating function
-  }
-  
-  public final var valueSnapshot: SequentialSnapshot<Value> {
-    get { _data.withLock { SequentialSnapshot(value: $0.value, version: $0.version) } }
-    
+  private let _data: RecursiveLock<(value: Value, version: UInt32, subscriptions: ContiguousArray<Subscription>)>
+  private let id: SourceID = SourceID()
+
+//  public final var value: Value {
+//    _data.withLock { $0.value }
+//  }
+
+  final var valueSnapshot: SequentialSnapshot<Value> {
+    _data.withLock { SequentialSnapshot(value: $0.value, version: $0.version, sourceID: id) }
   }
 
   init(_ value: Value) {
-    _data = RecursiveLock((value, 0, ContiguousArray()))
-    // CombineIdentifier(self)
+    _data = RecursiveLock((value: value, version: 0, subscriptions: ContiguousArray()))
   }
 
   deinit {
     // TBD
   }
-  
+
   internal func terminateWithCompletion() {
     // send(completion: .finished)
   }
@@ -119,17 +111,15 @@ internal final class InsulatedVersionedValueSubject<Value>: Publisher, Sendable 
     _data.withLock {
       $0.version += 1
       $0.value = value
-      
+
       for subscription in $0.subscriptions {
         subscription.receive(value)
       }
     }
   }
-  
-  internal final func withMutableAccess<R>(_ access: (inout GenericStateAccessHandle<Value>) -> sending R)
-  -> sending R {
-    
-  }
+
+  internal final func withMutableAccess<R>(_: (inout GenericStateAccessHandle<Value>) -> sending R)
+    -> sending R {}
 
   private func remove(_ subscription: Subscription) {
     _data.withLock {
@@ -139,13 +129,9 @@ internal final class InsulatedVersionedValueSubject<Value>: Publisher, Sendable 
   }
 }
 
-extension InsulatedVersionedValueSubject {
-  public final func valuePublisher() -> InfallibleValuePublisher<Value> {
-    fatalError()
-  }
-  
-  public final func takeUpdates(afterSnapshot snapshot: consuming SequentialSnapshot<Value>) -> AnyPublisher<Value, Never> {
-    self.drop(while: { [referenceVersion = snapshot._version] in
+extension InsulatedVersionedValueRelay {
+  public final func takeUpdates(afterSnapshot snapshot: SequentialSnapshot<Value>) -> AnyPublisher<Value, Never> {
+    drop(while: { [referenceVersion = snapshot._version] in
       $0._version <= referenceVersion
     })
     .map { $0.value }
@@ -154,19 +140,141 @@ extension InsulatedVersionedValueSubject {
   }
 }
 
-extension InsulatedVersionedValueSubject {
+import Synchronization
+
+import os
+
+extension InsulatedVersionedValueRelay {
+  fileprivate final class Subscription2: Combine.Subscription, Equatable {
+      // Вложенная структура для хранения всех изменяемых состояний
+      private struct State {
+          var demand = Subscribers.Demand.none
+          var downstream: (any Subscriber<Output, Never>)?
+          var receivedLastValue = false
+          var upstream: InsulatedVersionedValueRelay?
+      }
+      
+      // Потокобезопасная обертка вокруг состояния
+      private let state: Mutex<State>
+      
+      init(upstream: InsulatedVersionedValueRelay, downstream: any Subscriber<Output, Never>) {
+        self.state = Mutex(State(downstream: downstream, upstream: upstream))
+      }
+      
+      func cancel() {
+          // Извлекаем upstream для безопасного вызова тяжелого метода снаружи лока
+          let oldUpstream = state.withLock { state in
+              state.downstream = nil
+              let upstream = state.upstream
+              state.upstream = nil
+              return upstream
+          }
+          oldUpstream?.remove(self)
+      }
+      
+      func receive(_ value: Value) {
+          var downstreamToCall: (any Subscriber<Output, Never>)?
+          var action: Action = .none
+          
+          state.withLock { state in
+              guard let downstream = state.downstream else { return }
+              downstreamToCall = downstream
+              
+              switch state.demand {
+              case .unlimited:
+                  action = .sendUnlimited
+              case .none:
+                  state.receivedLastValue = false
+              default:
+                  state.receivedLastValue = true
+                  state.demand -= 1
+                  action = .sendLimited
+              }
+          }
+          
+          // Вызовы downstream делаются строго за пределами блокировки lock
+          switch action {
+          case .sendUnlimited:
+              _ = downstreamToCall?.receive(value)
+          case .sendLimited:
+              if let moreDemand = downstreamToCall?.receive(value) {
+                  state.withLock { state in
+                      state.demand += moreDemand
+                  }
+              }
+          case .none:
+              break
+          }
+      }
+      
+      func request(_ demand: Subscribers.Demand) {
+          precondition(demand > 0, "Demand must be greater than zero")
+          
+          var downstreamToCall: (any Subscriber<Output, Never>)?
+          var valueToSend: Value?
+          var action: Action = .none
+          
+          state.withLock { state in
+              guard let downstream = state.downstream else { return }
+              downstreamToCall = downstream
+              state.demand += demand
+              
+              guard !state.receivedLastValue, let value = state.upstream?.value else { return }
+              state.receivedLastValue = true
+              valueToSend = value
+              
+              switch state.demand {
+              case .unlimited:
+                  action = .sendUnlimited
+              default:
+                  state.demand -= 1
+                  action = .sendLimited
+              }
+          }
+          
+          // Вызовы downstream делаются строго за пределами блокировки lock
+          guard let value = valueToSend else { return }
+          
+          switch action {
+          case .sendUnlimited:
+              _ = downstreamToCall?.receive(value)
+          case .sendLimited:
+              if let moreDemand = downstreamToCall?.receive(value) {
+                  state.withLock { state in
+                      state.demand += moreDemand
+                  }
+              }
+          case .none:
+              break
+          }
+      }
+      
+    static func == (lhs: InsulatedVersionedValueRelay.Subscription2, rhs: InsulatedVersionedValueRelay.Subscription2) -> Bool {
+          lhs === rhs
+      }
+      
+      // Вспомогательное перечисление для логики отправки данных
+      private enum Action {
+          case none
+          case sendUnlimited
+          case sendLimited
+      }
+  }
+
+  
+  
   fileprivate final class Subscription: Combine.Subscription, Equatable {
     private var demand = Subscribers.Demand.none
     private var downstream: (any Subscriber<Output, Never>)?
     private let lock: os_unfair_lock_t
     private var receivedLastValue = false
-    private var upstream: InsulatedVersionedValueSubject?
+    private var upstream: InsulatedVersionedValueRelay?
 
-    init(upstream: InsulatedVersionedValueSubject, downstream: any Subscriber<Output, Never>) {
+    init(upstream: InsulatedVersionedValueRelay, downstream: any Subscriber<Output, Never>) {
       self.upstream = upstream
       self.downstream = downstream
-      self.lock = os_unfair_lock_t.allocate(capacity: 1)
-      self.lock.initialize(to: os_unfair_lock())
+      lock = os_unfair_lock_t.allocate(capacity: 1)
+      lock.initialize(to: os_unfair_lock())
     }
 
     deinit {
@@ -175,7 +283,7 @@ extension InsulatedVersionedValueSubject {
     }
 
     func cancel() {
-      self.lock.sync {
+      lock.sync {
         self.downstream = nil
         self.upstream?.remove(self)
         self.upstream = nil
@@ -183,29 +291,29 @@ extension InsulatedVersionedValueSubject {
     }
 
     func receive(_ value: Value) {
-      self.lock.lock()
+      lock.lock()
 
       guard let downstream else {
-        self.lock.unlock()
+        lock.unlock()
         return
       }
 
-      switch self.demand {
+      switch demand {
       case .unlimited:
-        self.lock.unlock()
+        lock.unlock()
         // NB: Adding to unlimited demand has no effect and can be ignored.
         _ = downstream.receive(value)
 
       case .none:
-        self.receivedLastValue = false
-        self.lock.unlock()
+        receivedLastValue = false
+        lock.unlock()
 
       default:
-        self.receivedLastValue = true
-        self.demand -= 1
-        self.lock.unlock()
+        receivedLastValue = true
+        demand -= 1
+        lock.unlock()
         let moreDemand = downstream.receive(value)
-        self.lock.sync {
+        lock.sync {
           self.demand += moreDemand
         }
       }
@@ -214,35 +322,35 @@ extension InsulatedVersionedValueSubject {
     func request(_ demand: Subscribers.Demand) {
       precondition(demand > 0, "Demand must be greater than zero")
 
-      self.lock.lock()
+      lock.lock()
 
       guard let downstream else {
-        self.lock.unlock()
+        lock.unlock()
         return
       }
 
       self.demand += demand
 
-      guard !self.receivedLastValue, let value = self.upstream?.value else {
-        self.lock.unlock()
+      guard !receivedLastValue, let value = upstream?.value else {
+        lock.unlock()
         return
       }
 
-      self.receivedLastValue = true
+      receivedLastValue = true
 
       switch self.demand {
       case .unlimited:
-        self.lock.unlock()
+        lock.unlock()
         // NB: Adding to unlimited demand has no effect and can be ignored.
         _ = downstream.receive(value)
 
       default:
         self.demand -= 1
-        self.lock.unlock()
+        lock.unlock()
         let moreDemand = downstream.receive(value)
-        self.lock.lock()
+        lock.lock()
         self.demand += moreDemand
-        self.lock.unlock()
+        lock.unlock()
       }
     }
 
@@ -251,9 +359,6 @@ extension InsulatedVersionedValueSubject {
     }
   }
 }
-
-
-
 
 /*
  /// `CurrentValueMutualRelay` is a thread-safe reactive state container
@@ -276,7 +381,7 @@ extension InsulatedVersionedValueSubject {
  ///   notifies all subscribers that it is `.finished`. No manual clean-up or cancellation tracking is required.
  /// * **Strict Chronological Timeline:** Every single state change is recorded sequentially. This ensures
  ///   the UI never renders an older state on top of a newer one due to multi-threaded race conditions.
- 
+
  */
 
 /*
@@ -289,9 +394,9 @@ extension InsulatedVersionedValueSubject {
  | `CurrentValueRelay`       |  ✅  |  ❌  |        ❌       |         ❌        |         ❌          |
  | New Subject-like          |  ✅  |  ❌  |        ✅       |         ❌        |         ✅          |
  | `InsulatedValueRelay`     |  ✅  |  ❌  |        ❌       |         ✅        |         ✅          |
- 
+
  | InsulatedRelay TransactionalRelay ExclusiveRelay MutualRelay IsolatedRelay
- 
+
  | withExclusiveAccess withIsolatedAccess mutate {}
 
  ## Clarifying questions
@@ -315,19 +420,19 @@ extension InsulatedVersionedValueSubject {
  - `CurrentValueHolder` — holds a value, lifecycle-bound
 
  Do these directions make sense, or do you have a different mental model for the naming?
- 
+
  */
 
 // onComplete in deinit
 /*
  Yes, it is incredibly useful.
  It acts as a safety release valve for asynchronous downstream chains. It solves three critical problems:
- 
+
  Problem A: Unending for await Loops (Swift Concurrency)When bridging a Combine publisher to modern Swift Concurrency using .values, it generates an infinite AsyncSequence.
- 
+
  Without completion in deinit: If PublishedState deallocates silently, the for await loop hangs forever in an await state. The enclosing Task is leaked, and memory goes up.With completion in deinit: Emitting .finished causes the AsyncSequence iterator to naturally return nil. The for await loop safely terminates, and the Task cleans itself up.
- 
+
  Problem B: State Accumulation Operators (.collect(), .reduce())Operators that gather values over time require a termination signal to deliver their payload.The Problem: If you run statePublisher.collect(), it accumulates updates but will never emit anything downstream until it receives a terminal .finished event.The Solution: Auto-completing on deinit lets downstream architectures catch the complete sequence history exactly when the state machine dies.
- 
+
  Problem C: Deterministic Memory Management (.sink)Standard .sink subscriptions are usually stored in an external Set<AnyCancellable>.The Problem: If a subscriber forgets to cancel their token, but the underlying state manager object dies, the subscriber's closure is kept alive by the remaining pipeline infrastructure.The Solution: Sending .finished on deinit tears down the subscription graph from the top down. The subscriber gets notified that the source is dead, automatically invalidating the pipeline.
  */
