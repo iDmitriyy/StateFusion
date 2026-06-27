@@ -25,7 +25,7 @@ extension Publisher where Failure == Never {
     state publishedState: borrowing PublishedState<State>,
     evaluate: sending @escaping (_ state: borrowing State) -> sending EventFilteringResult<State, EvaluationOutput>,
   )
-    -> AnyPublisher<(Output, EvaluationOutput), Failure> {
+    -> some Publisher<(Output, EvaluationOutput), Failure> {
     compactMap { [weak publishedState = publishedState._stateImpObject] element -> (Output, EvaluationOutput)? in
       guard let publishedState else {
         assertionFailure(_publishedStateDeallocationAssertMessage(output: Output.self, state: State.self))
@@ -50,7 +50,6 @@ extension Publisher where Failure == Never {
         return nil
       }
     }
-    .eraseToAnyPublisher()
   }
 
   // State of StateAndData :

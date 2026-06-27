@@ -82,7 +82,12 @@ extension EventFilteringResult where Output == Void {
 // MARK: - EventReducingResult
 
 public enum EventReducingResult<State>: ~Copyable {
+  /// The event is rejected because it arrived in an unexpected state.
+  ///
+  /// No state changes occur, and the event is dropped from the publisher chain.
   case ignore
+  
+  /// The event is accepted, mutating the current state.
   case transition(to: State)
 }
 

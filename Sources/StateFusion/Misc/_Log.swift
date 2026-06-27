@@ -80,4 +80,5 @@ internal enum InternalErrorCode: Int {
   case unexpectedNilObject = 1
   
   case publishedStateRetained = 20
+  case snapshotSourceMismatch
 }

@@ -15,10 +15,9 @@ extension Publisher where Output == Void, Failure == Never {
     output _: EvaluationOutput.Type = EvaluationOutput.self,
     where evaluate: sending @escaping (borrowing State) -> sending EventFilteringResult<State, EvaluationOutput>,
   )
-    -> AnyPublisher<EvaluationOutput, Failure> {
+    -> some Publisher<EvaluationOutput, Failure> {
     _filterBy(state: publishedState, evaluate: evaluate)
       .map { _, evaluationOutput in evaluationOutput }
-      .eraseToAnyPublisher()
     // FIXME: - + share()
   }
 }
@@ -28,10 +27,9 @@ extension Publisher where Failure == Never {
     by publishedState: borrowing PublishedState<State>,
     where evaluate: sending @escaping (borrowing State) -> sending EventFilteringResult<State, Void>,
   )
-    -> AnyPublisher<Output, Failure> {
+    -> some Publisher<Output, Failure> {
     _filterBy(state: publishedState, evaluate: evaluate)
       .map { output, _ in output }
-      .eraseToAnyPublisher()
     // FIXME: - + share()
   }
 
@@ -40,7 +38,7 @@ extension Publisher where Failure == Never {
     output _: EvaluationOutput.Type,
     where evaluate: sending @escaping (borrowing State) -> sending EventFilteringResult<State, EvaluationOutput>,
   )
-    -> AnyPublisher<(Output, EvaluationOutput), Failure> {
+    -> some Publisher<(Output, EvaluationOutput), Failure> {
     _filterBy(state: publishedState, evaluate: evaluate)
     // FIXME: - + share()
   }

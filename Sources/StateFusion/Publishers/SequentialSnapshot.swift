@@ -74,40 +74,19 @@ public struct SequentialSnapshot<T> {
   }
 }
 
-public struct UniqueSequentialSnapshot<T>: ~Copyable {
-  // TODO: add some ID/sourceIdentity to check that snapshot was consumed by the same Subject/Relay that produced it.
-  public let value: T
-
-  /// A monotonically increasing identifier for this snapshot version.
-  @inlinable @inline(always)
-  public var version: some Comparable {
-    _valueVersion
-  }
-
-  /// serial number
-  @usableFromInline
-  internal let _valueVersion: UInt32
-
-  internal init(initial value: T) {
-    self.value = value
-    _valueVersion = 0
-  }
-
-  internal init(value: T, version: UInt32) {
-    self.value = value
-    _valueVersion = version
-  }
-}
+extension SequentialSnapshot: Sendable where T: Sendable {}
 
 import Synchronization
 
 public struct SourceID: Sendable, Equatable {
-  private let rawValue: Int
+  private let rawValue: UInt
 
   public init() {
     let currentID = SourceID.currentID.wrappingAdd(1, ordering: .relaxed).oldValue
     rawValue = currentID
   }
 
-  private static let currentID = Atomic<Int>(0)
+  private static let currentID = Atomic<UInt>(0)
 }
+
+// TODO: - is UInt32 reasonable

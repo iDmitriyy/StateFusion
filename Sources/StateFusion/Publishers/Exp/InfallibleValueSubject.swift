@@ -5,7 +5,7 @@
 //  Created by Dmitriy Ignatyev on 15.06.2026.
 //
 
-public import Combine
+//public import Combine
 
 /// Owned
 public struct OwnedInfallibleValueSubject<Output>: ~Copyable {}
