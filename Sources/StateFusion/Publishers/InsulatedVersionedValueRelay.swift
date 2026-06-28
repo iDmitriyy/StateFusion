@@ -184,8 +184,10 @@ import Foundation
 
 extension InsulatedVersionedValueRelay {
   fileprivate final class Subscription: Combine.Subscription, Equatable {
-    private var upstream: InsulatedVersionedValueRelay?
-    private var downstream: (any Subscriber<Output, Never>)?
+    private var upstream: InsulatedVersionedValueRelay? // TODO: weak?
+    private var downstream: SubscriberVariant?
+//    private var downstream: (any Subscriber<Output, Never>)?
+    
     
     private var demand = Subscribers.Demand.none
     private var receivedLastValue = false
@@ -194,7 +196,8 @@ extension InsulatedVersionedValueRelay {
 
     init(upstream: InsulatedVersionedValueRelay, downstream: any Subscriber<Output, Never>) {
       self.upstream = upstream
-      self.downstream = downstream
+//      self.downstream = downstream
+      self.downstream = .versionedValue(downstream)
       lock = os_unfair_lock_t.allocate(capacity: 1)
       lock.initialize(to: os_unfair_lock())
     }
@@ -213,7 +216,7 @@ extension InsulatedVersionedValueRelay {
       }
     }
 
-    func receive(_ value: SequentialSnapshot<Value>) {
+    func receive(_ new: SequentialSnapshot<Value>) {
       lock.lock()
 
       guard let downstream else {
@@ -223,9 +226,35 @@ extension InsulatedVersionedValueRelay {
 
       switch demand {
       case .unlimited:
-        lock.unlock()
         // NB: Adding to unlimited demand has no effect and can be ignored.
-        _ = downstream.receive(value)
+//        _ = downstream.receive(value)
+        switch downstream {
+        case let .value(downstream):
+          lock.unlock() // FIXME: - eliminate lock.unlock() by using explicit LifecycleStage
+          _ = downstream.receive(new.value)
+          
+        case let .valueTakeUpdatesAfter(snapshotVersion, snapshotSourceID, downstream):
+          guard let upstream = upstream else {
+            lock.unlock(); return
+          }
+          lock.unlock()
+          // == drop(while: { $0._version <= snapshot.version })
+          if upstream.id == snapshotSourceID, new._version <= snapshotVersion {
+            return
+          } else {
+            // if new._version > snapshotVersion then send values
+            // if sourceID is not valid, then do not drop value (pass all values)
+            _ = downstream.receive(new.value)
+          }
+          
+        case let .versionedValue(downstream):
+          lock.unlock()
+          let output = (value: new.value, version: new._version)
+          _ = downstream.receive(output)
+        case let .versionedValueSnapshot(downstream):
+          lock.unlock()
+          _ = downstream.receive(new)
+        }
 
       case .none:
         receivedLastValue = false
@@ -235,7 +264,18 @@ extension InsulatedVersionedValueRelay {
         receivedLastValue = true
         demand -= 1
         lock.unlock()
-        let moreDemand = downstream.receive(value)
+        switch downstream {
+        case let .value(downstream):
+          <#code#>
+        case let .valueTakeUpdatesAfter(_, _, downstream):
+          <#code#>
+        case let .versionedValue(downstream):
+          <#code#>
+        case let .versionedValueSnapshot(downstream):
+          <#code#>
+        }
+        
+        let moreDemand = downstream.receive(new)
         lock.sync {
           self.demand += moreDemand
         }
@@ -279,6 +319,38 @@ extension InsulatedVersionedValueRelay {
     
     static func == (lhs: Subscription, rhs: Subscription) -> Bool {
       lhs === rhs
+    }
+    
+    enum SubscriberVariant {
+      case value(any Subscriber<Value, Never>)
+      case valueTakeUpdatesAfter(referenceVersion: UInt32, sourceID: SourceID, any Subscriber<Value, Never>)
+      case versionedValue(any Subscriber<Output, Never>)
+      case versionedValueSnapshot(any Subscriber<SequentialSnapshot<Value>, Never>)
+      
+      func send(new: SequentialSnapshot<Value>, upstreamID: SourceID?) -> Subscribers.Demand {
+        // FIXME: what does upstreamID == nil means? except it is an artifact.
+        // nil value mean that upstream is as a resource was cleaned up, which means that cancellation happened
+        switch self {
+        case let .value(downstream):
+          downstream.receive(new.value)
+          
+        case let .valueTakeUpdatesAfter(snapshotVersion, snapshotSourceID, downstream):
+          // code below is analog of `drop(while: { $0._version <= snapshot.version })`
+          if upstreamID == snapshotSourceID, new._version <= snapshotVersion {
+            .none //
+          } else {
+            // if new._version > snapshotVersion then send values
+            // if sourceID is not valid, then do not drop value (pass all values)
+            downstream.receive(new.value)
+          }
+          
+        case let .versionedValue(downstream):
+          downstream.receive((value: new.value, version: new._version))
+          
+        case let .versionedValueSnapshot(downstream):
+          downstream.receive(new)
+        }
+      }
     }
     
     enum LifecycleStage {
