@@ -156,7 +156,7 @@ extension Publishers {
 
 //===-------------------------------------------------------------------------------------------------------------------===//
 
-// MARK: - Subscription
+// MARK: - ____
 
 extension Publishers {
   /// A wrapper that exposes a versioned-value publisher interface.
@@ -184,151 +184,175 @@ import Foundation
 
 extension InsulatedVersionedValueRelay {
   fileprivate final class Subscription: Combine.Subscription, Equatable {
-    private var upstream: InsulatedVersionedValueRelay? // TODO: weak?
-    private var downstream: SubscriberVariant?
-//    private var downstream: (any Subscriber<Output, Never>)?
-    
-    
-    private var demand = Subscribers.Demand.none
-    private var receivedLastValue = false
-    
+    private var lifecycleStage: LifecycleStage
     private let lock: os_unfair_lock_t
 
+    // MARK: - Init
+
     init(upstream: InsulatedVersionedValueRelay, downstream: any Subscriber<Output, Never>) {
-      self.upstream = upstream
-//      self.downstream = downstream
-      self.downstream = .versionedValue(downstream)
+      lifecycleStage = .active(ActiveState(upstream: upstream, downstream: .versionedValue(downstream)))
       lock = os_unfair_lock_t.allocate(capacity: 1)
       lock.initialize(to: os_unfair_lock())
     }
 
     deinit {
-      self.lock.deinitialize(count: 1)
-      self.lock.deallocate()
-    }
-    // MARK: Cancellable Imp
-    
-    func cancel() {
-      lock.sync {
-        self.downstream = nil
-        self.upstream?.remove(self)
-        self.upstream = nil
-      }
+      lock.deinitialize(count: 1)
+      lock.deallocate()
     }
 
-    func receive(_ new: SequentialSnapshot<Value>) {
+    func receive(_ snapshot: SequentialSnapshot<Value>) {
       lock.lock()
 
-      guard let downstream else {
+      guard case .active(let activeState) = lifecycleStage else {
         lock.unlock()
         return
       }
-      let upstreamID = upstream?.id
 
-      switch demand {
+      let upstreamID = activeState.upstream.id
+      let downstream = activeState.downstream
+
+      switch activeState.demand {
       case .unlimited:
-        self.lock.unlock()
+        lock.unlock()
         // NB: Adding to unlimited demand has no effect and can be ignored.
-        _ = downstream.receive(new, upstreamID: upstreamID)
+        _ = downstream.receive(snapshot, upstreamID: upstreamID)
 
       case .none:
-        receivedLastValue = false
+        activeState.receivedLastValue = false
         lock.unlock()
 
       default:
-        receivedLastValue = true
-        demand -= 1
+        activeState.receivedLastValue = true
+        activeState.demand -= 1
         lock.unlock()
-        // TODO: - need to validate this code brunch later
-        let moreDemand = downstream.receive(new, upstreamID: upstreamID)
+        // TODO: - need to validate this code brunch later. Why not make everything and then
+        // lock.unlock()? Whit lock in 2 steps?
+        let moreDemand = downstream.receive(snapshot, upstreamID: upstreamID)
         lock.sync {
-          self.demand += moreDemand
+          activeState.demand += moreDemand
         }
+      }
+    }
+    
+    // MARK: Combine.Subscription Imp
+
+    func cancel() {
+      lock.sync {
+        if case .active(let state) = lifecycleStage {
+          state.upstream.remove(self)
+        }
+        lifecycleStage = .terminal
+        // downstream, upstream, demand, receivedLastValue are freed on cancellation.
       }
     }
 
     func request(_ demand: Subscribers.Demand) {
       precondition(demand > 0, "Demand must be greater than zero")
+      // TODO: demand.assertNonZero()
 
       lock.lock()
 
-      guard let downstream else {
+      guard case .active(let activeState) = lifecycleStage else {
+        lock.unlock()
+        return
+      }
+
+      activeState.demand += demand
+      
+      guard !activeState.receivedLastValue else {
         lock.unlock()
         return
       }
       
-      self.demand += demand
-
-      guard !receivedLastValue, let upstream = upstream else {
-        lock.unlock()
-        return
-      }
+      activeState.receivedLastValue = true
       
-      let upstreamID = upstream.id
-      let valueSnapshot = upstream.uncheckedSendable_valueSnapshot
+      let upstreamID = activeState.upstream.id
+      let downstream = activeState.downstream
+      let snapshot = activeState.upstream.uncheckedSendable_valueSnapshot
 
-      receivedLastValue = true
-
-      switch self.demand {
+      switch activeState.demand {
       case .unlimited:
         lock.unlock()
         // NB: Adding to unlimited demand has no effect and can be ignored.
-        _ = downstream.receive(valueSnapshot, upstreamID: upstreamID)
+        _ = downstream.receive(snapshot, upstreamID: upstreamID)
 
       default:
-        self.demand -= 1
+        activeState.demand -= 1
         lock.unlock()
-        let moreDemand = downstream.receive(valueSnapshot, upstreamID: upstreamID)
-        lock.lock()
-        self.demand += moreDemand
-        lock.unlock()
+        let moreDemand = downstream.receive(snapshot, upstreamID: upstreamID)
+        lock.sync {
+          activeState.demand += moreDemand
+        }
       }
     }
-    
+
+    // MARK: - Equatable
+
     static func == (lhs: Subscription, rhs: Subscription) -> Bool {
       lhs === rhs
     }
     
-    enum SubscriberVariant {
-      case value(any Subscriber<Value, Never>)
-      case valueTakeUpdatesAfter(referenceVersion: UInt32, sourceID: SourceID, any Subscriber<Value, Never>)
-      case versionedValue(any Subscriber<Output, Never>)
-      case versionedValueSnapshot(any Subscriber<SequentialSnapshot<Value>, Never>)
-      
-      func receive(_ new: SequentialSnapshot<Value>, upstreamID: SourceID?) -> Subscribers.Demand {
-        // FIXME: what does upstreamID == nil means? except it is an artifact.
-        // nil value mean that upstream is as a resource was cleaned up, which means that cancellation happened. So should not send value to downstream? The downstream and upstream
-        // should either both exist or both cleaned up.
-        // The func receive(_ new: SequentialSnapshot<Value>) call is made by upstream, so the fact
-        // that function called means that upstream exist.
-        switch self {
-        case let .value(downstream):
-          downstream.receive(new.value)
-          
-        case let .valueTakeUpdatesAfter(snapshotVersion, snapshotSourceID, downstream):
-          // TODO: need to somehow remember a Bool indication that values must be send (as in dropWhile)
-          // Variants: do it under a lock or use Atomic<Bool> with proper memory ordering
-          // code below is analog of `drop(while: { $0._version <= snapshot.version })`
-          if upstreamID == snapshotSourceID, new._version <= snapshotVersion {
-            .none // TODO: is it correct to return none or nil?
-          } else {
-            // if new._version > snapshotVersion then send values
-            // if sourceID is not valid, then do not drop value (pass all values)
-            downstream.receive(new.value)
-          }
-          
-        case let .versionedValue(downstream):
-          downstream.receive((value: new.value, version: new._version))
-          
-        case let .versionedValueSnapshot(downstream):
-          downstream.receive(new)
-        }
+    // MARK: - LifecycleStage
+
+    enum LifecycleStage {
+      case active(ActiveState)
+      case terminal
+    }
+
+    /// Reference-type state blob so mutations are in-place (no write-back to `stage`).
+    /// Only accessed under `lock`.
+    final class ActiveState {
+      let upstream: InsulatedVersionedValueRelay
+      var downstream: SubscriberVariant
+      var demand: Subscribers.Demand
+      var receivedLastValue: Bool
+
+      init(upstream: InsulatedVersionedValueRelay, downstream: SubscriberVariant) {
+        self.upstream = upstream
+        self.downstream = downstream
+        self.demand = .none
+        self.receivedLastValue = false
       }
     }
-    
-    enum LifecycleStage {
-      case active
-      case terminal
+  }
+}
+
+// MARK: - SubscriberVariant
+
+extension InsulatedVersionedValueRelay.Subscription {
+  enum SubscriberVariant {
+    case value(any Subscriber<Value, Never>)
+    case valueTakeUpdatesAfter(referenceVersion: UInt32, sourceID: SourceID, any Subscriber<Value, Never>)
+    case versionedValue(any Subscriber<(value: Value, version: UInt32), Never>)
+    case versionedValueSnapshot(any Subscriber<SequentialSnapshot<Value>, Never>)
+
+    func receive(_ new: SequentialSnapshot<Value>, upstreamID: SourceID) -> Subscribers.Demand {
+      switch self {
+      case let .value(downstream):
+        return downstream.receive(new.value)
+
+      case let .valueTakeUpdatesAfter(snapshotVersion, snapshotSourceID, downstream):
+        // Analog of `drop(while: { $0._version <= snapshot.version })`
+        if upstreamID == snapshotSourceID {
+          if new._version > snapshotVersion {
+            return downstream.receive(new.value)
+          } else {
+            return .none // TODO: is it correct to return none or nil?
+          }
+        } else {
+          // if sourceID is not valid, then do not drop value (pass all)
+          log(.warning, StateFusionLogEntry(code: .snapshotSourceMismatch, message: "Snapshot sourceID mismatch"))
+          return downstream.receive(new.value)
+        }
+        // TODO: need to somehow remember a Bool indication that values must be send (as in dropWhile)
+        // Variants: do it under a lock or use Atomic<Bool> with proper memory ordering
+
+      case let .versionedValue(downstream):
+        return downstream.receive((value: new.value, version: new._version))
+
+      case let .versionedValueSnapshot(downstream):
+        return downstream.receive(new)
+      }
     }
   }
 }
