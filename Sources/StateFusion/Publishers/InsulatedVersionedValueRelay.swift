@@ -99,11 +99,11 @@ extension InsulatedVersionedValueRelay {
 }
 
 extension InsulatedVersionedValueRelay {
-//  final var valueSnapshot: SequentialSnapshot<Value> {
-//    _data.withLock {
-//      SequentialSnapshot(value: $0.value, version: $0.version, sourceID: id)
-//    }
-//  }
+  fileprivate final var uncheckedSendable_valueSnapshot: SequentialSnapshot<Value> {
+    _data.withLockUncheckedSending {
+      SequentialSnapshot(value: $0.value, version: $0.version, sourceID: id)
+    }
+  }
 }
 
 extension InsulatedVersionedValueRelay where Value: Sendable {
@@ -223,38 +223,13 @@ extension InsulatedVersionedValueRelay {
         lock.unlock()
         return
       }
+      let upstreamID = upstream?.id
 
       switch demand {
       case .unlimited:
+        self.lock.unlock()
         // NB: Adding to unlimited demand has no effect and can be ignored.
-//        _ = downstream.receive(value)
-        switch downstream {
-        case let .value(downstream):
-          lock.unlock() // FIXME: - eliminate lock.unlock() by using explicit LifecycleStage
-          _ = downstream.receive(new.value)
-          
-        case let .valueTakeUpdatesAfter(snapshotVersion, snapshotSourceID, downstream):
-          guard let upstream = upstream else {
-            lock.unlock(); return
-          }
-          lock.unlock()
-          // == drop(while: { $0._version <= snapshot.version })
-          if upstream.id == snapshotSourceID, new._version <= snapshotVersion {
-            return
-          } else {
-            // if new._version > snapshotVersion then send values
-            // if sourceID is not valid, then do not drop value (pass all values)
-            _ = downstream.receive(new.value)
-          }
-          
-        case let .versionedValue(downstream):
-          lock.unlock()
-          let output = (value: new.value, version: new._version)
-          _ = downstream.receive(output)
-        case let .versionedValueSnapshot(downstream):
-          lock.unlock()
-          _ = downstream.receive(new)
-        }
+        _ = downstream.receive(new, upstreamID: upstreamID)
 
       case .none:
         receivedLastValue = false
@@ -264,18 +239,8 @@ extension InsulatedVersionedValueRelay {
         receivedLastValue = true
         demand -= 1
         lock.unlock()
-        switch downstream {
-        case let .value(downstream):
-          <#code#>
-        case let .valueTakeUpdatesAfter(_, _, downstream):
-          <#code#>
-        case let .versionedValue(downstream):
-          <#code#>
-        case let .versionedValueSnapshot(downstream):
-          <#code#>
-        }
-        
-        let moreDemand = downstream.receive(new)
+        // TODO: - need to validate this code brunch later
+        let moreDemand = downstream.receive(new, upstreamID: upstreamID)
         lock.sync {
           self.demand += moreDemand
         }
@@ -291,13 +256,16 @@ extension InsulatedVersionedValueRelay {
         lock.unlock()
         return
       }
-
+      
       self.demand += demand
 
-      guard !receivedLastValue, let value = upstream?.valueSnapshot else {
+      guard !receivedLastValue, let upstream = upstream else {
         lock.unlock()
         return
       }
+      
+      let upstreamID = upstream.id
+      let valueSnapshot = upstream.uncheckedSendable_valueSnapshot
 
       receivedLastValue = true
 
@@ -305,12 +273,12 @@ extension InsulatedVersionedValueRelay {
       case .unlimited:
         lock.unlock()
         // NB: Adding to unlimited demand has no effect and can be ignored.
-        _ = downstream.receive(value)
+        _ = downstream.receive(valueSnapshot, upstreamID: upstreamID)
 
       default:
         self.demand -= 1
         lock.unlock()
-        let moreDemand = downstream.receive(value)
+        let moreDemand = downstream.receive(valueSnapshot, upstreamID: upstreamID)
         lock.lock()
         self.demand += moreDemand
         lock.unlock()
@@ -327,17 +295,22 @@ extension InsulatedVersionedValueRelay {
       case versionedValue(any Subscriber<Output, Never>)
       case versionedValueSnapshot(any Subscriber<SequentialSnapshot<Value>, Never>)
       
-      func send(new: SequentialSnapshot<Value>, upstreamID: SourceID?) -> Subscribers.Demand {
+      func receive(_ new: SequentialSnapshot<Value>, upstreamID: SourceID?) -> Subscribers.Demand {
         // FIXME: what does upstreamID == nil means? except it is an artifact.
-        // nil value mean that upstream is as a resource was cleaned up, which means that cancellation happened
+        // nil value mean that upstream is as a resource was cleaned up, which means that cancellation happened. So should not send value to downstream? The downstream and upstream
+        // should either both exist or both cleaned up.
+        // The func receive(_ new: SequentialSnapshot<Value>) call is made by upstream, so the fact
+        // that function called means that upstream exist.
         switch self {
         case let .value(downstream):
           downstream.receive(new.value)
           
         case let .valueTakeUpdatesAfter(snapshotVersion, snapshotSourceID, downstream):
+          // TODO: need to somehow remember a Bool indication that values must be send (as in dropWhile)
+          // Variants: do it under a lock or use Atomic<Bool> with proper memory ordering
           // code below is analog of `drop(while: { $0._version <= snapshot.version })`
           if upstreamID == snapshotSourceID, new._version <= snapshotVersion {
-            .none //
+            .none // TODO: is it correct to return none or nil?
           } else {
             // if new._version > snapshotVersion then send values
             // if sourceID is not valid, then do not drop value (pass all values)
@@ -360,14 +333,33 @@ extension InsulatedVersionedValueRelay {
   }
 }
 
+public import struct Darwin.os_unfair_lock_s
+
+extension UnsafeMutablePointer<os_unfair_lock_s> {
+  @inlinable @discardableResult
+  func sync<R>(_ work: () -> R) -> R {
+    os_unfair_lock_lock(self)
+    defer { os_unfair_lock_unlock(self) }
+    return work()
+  }
+
+  func lock() {
+    os_unfair_lock_lock(self)
+  }
+
+  func unlock() {
+    os_unfair_lock_unlock(self)
+  }
+}
+
 //extension InsulatedVersionedValueRelay {
 //  fileprivate final class Subscription: Combine.Subscription, Equatable {
 //    private var upstream: InsulatedVersionedValueRelay?
 //    private var downstream: (any Subscriber<Output, Never>)?
-//    
+//
 //    private var demand = Subscribers.Demand.none
 //    private var receivedLastValue = false
-//    
+//
 //    private let lock: os_unfair_lock_t
 //
 //    init(upstream: InsulatedVersionedValueRelay, downstream: any Subscriber<Output, Never>) {
@@ -382,7 +374,7 @@ extension InsulatedVersionedValueRelay {
 //      self.lock.deallocate()
 //    }
 //    // MARK: Cancellable Imp
-//    
+//
 //    func cancel() {
 //      lock.sync {
 //        self.downstream = nil
@@ -454,33 +446,14 @@ extension InsulatedVersionedValueRelay {
 //        lock.unlock()
 //      }
 //    }
-//    
+//
 //    static func == (lhs: Subscription, rhs: Subscription) -> Bool {
 //      lhs === rhs
 //    }
-//    
+//
 //    enum LifecycleStage {
 //      case active
 //      case terminal
 //    }
 //  }
 //}
-
-public import struct Darwin.os_unfair_lock_s
-
-extension UnsafeMutablePointer<os_unfair_lock_s> {
-  @inlinable @discardableResult
-  func sync<R>(_ work: () -> R) -> R {
-    os_unfair_lock_lock(self)
-    defer { os_unfair_lock_unlock(self) }
-    return work()
-  }
-
-  func lock() {
-    os_unfair_lock_lock(self)
-  }
-
-  func unlock() {
-    os_unfair_lock_unlock(self)
-  }
-}
