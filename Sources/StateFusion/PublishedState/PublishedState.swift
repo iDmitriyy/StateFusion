@@ -142,7 +142,7 @@ extension PublishedState where StateEntity: AnyObject {
 
 @usableFromInline
 internal final class _PublishedState<StateEntity: Sendable>: @unchecked Sendable {
-  private weak var _shared_publisher: InfallibleValuePublisher<StateEntity>? // FIXME: - is it safe and no retain cycle?
+  private weak var _shared_publisher: InfallibleValuePublisher<StateEntity>?
 
   @usableFromInline
   /* private */ internal let _private_use_only_subject: CurrentValueSubject<StateEntity, Never>
@@ -171,12 +171,7 @@ internal final class _PublishedState<StateEntity: Sendable>: @unchecked Sendable
     if let _publisher = _shared_publisher {
       publisher = _publisher
     } else {
-      publisher = InfallibleValuePublisher(retained_unverifiedValuePublisher: _private_use_only_subject, getCurrentValueSnapshot: { [publishedState = self] in
-        publishedState.withLockAccess { stateEntity in
-          // FIXME: - Snapshot
-          SequentialSnapshot(value: stateEntity, version: 0, sourceID: SourceID())
-        }
-      })
+      publisher = InfallibleValuePublisher(retained_unverifiedValuePublisher: _private_use_only_subject)
       _shared_publisher = publisher
     }
     return publisher

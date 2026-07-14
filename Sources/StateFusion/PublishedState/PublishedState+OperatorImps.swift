@@ -7,13 +7,17 @@
 
 import Combine
 
-enum Owning<T: AnyObject> {
+internal enum Owning<T: AnyObject> {
   case retained(T)
   case borrowed(Weak<T>)
 }
 
-struct Weak<T: AnyObject> {
+internal struct Weak<T: AnyObject> {
   weak let instance: T?
+}
+
+internal struct Unowned<T: AnyObject> {
+  unowned let instance: T
 }
 
 extension Publisher where Failure == Never {

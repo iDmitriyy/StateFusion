@@ -5,7 +5,7 @@
 //  Created by Dmitriy Ignatyev on 18.06.2026.
 //
 
-public import Combine
+//public import Combine
 
 //public final class InsulatedValueRelay<Output>: Subject<Output, Never> { // | Insulated Transactional
 //  internal let _subject: CurrentValueSubject<SequentialSnapshot<Output>, Never>

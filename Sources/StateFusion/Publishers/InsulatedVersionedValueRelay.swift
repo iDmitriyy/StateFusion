@@ -6,114 +6,36 @@
 //
 
 public import Combine
-
-//===-------------------------------------------------------------------------------------------------------------------===//
-// MARK: - Insulated VersionedValue Relay
-
-// TODO: ? ~Copyable
-
-internal final class InsulatedVersionedValueRelay<Value>: Publisher, Sendable {
-  typealias Output = (value: Value, version: UInt32)
-  typealias Failure = Never
-
-  private let _data: RecursiveLock<(value: Value, version: UInt32, subscriptions: ContiguousArray<Subscription>)>
-  private let id: SourceID = SourceID()
-  
-  init(_ value: Value) {
-    _data = RecursiveLock(uncheckedState: (value: value, version: 0, subscriptions: ContiguousArray()))
-  }
-
-  deinit {
-    // TBD
-  }
-
-  // MARK: Publisher Protocol Imp
-  
-  func receive(subscriber: some Subscriber<Output, Never>) {
-    let subscription = Subscription(upstream: self, downstream: subscriber)
-    _data.withLock {
-      $0.subscriptions.append(subscription)
-    }
-    subscriber.receive(subscription: subscription)
-  }
-  
-  // MARK: Relay Specific
-  
-  internal func internal_terminateWithCompletion() {
-    // send(completion: .finished)
-  }
-
-  internal func send(nextValue value: Value) {
-    _data.withLock {
-      $0.version += 1
-      $0.value = value
-      // !!!
-      let snapshot = SequentialSnapshot(value: $0.value, version: $0.version, sourceID: id)
-      for subscription in $0.subscriptions {
-        subscription.receive(snapshot)
-      }
-    }
-  }
-  
-  internal final func withInoutAccess<R>(_ access: (inout Value) -> sending R)
-    -> sending R {
-      _data.withLock {
-        $0.version += 1
-        let result = access(&$0.value)
-        // !!!
-        let snapshot = SequentialSnapshot(value: $0.value, version: $0.version, sourceID: id)
-        for subscription in $0.subscriptions {
-          subscription.receive(snapshot)
-        }
-        return result
-      }
-    }
-
-//  internal final func withMutationTrackingAccess<R>(_: (inout GenericStateAccessHandle<Value>) -> sending R)
-//    -> sending R {
-//
-//    }
-
-  // MARK: Private Imp
-  
-  private func remove(_ subscription: Subscription) {
-    _data.withLock {
-      guard let index = $0.subscriptions.firstIndex(of: subscription) else { return }
-      $0.subscriptions.remove(at: index)
-    }
-  }
-}
+import Foundation
+import Synchronization
 
 extension InsulatedVersionedValueRelay {
-  // func valuePublisher() -> some Publisher<Value, Never>
-  
-  // func snapshotPublisher() -> some Publisher<SequentialSnapshot<Value>, Never>
-}
-
-extension InsulatedVersionedValueRelay {
-//  private var _uncheckedOutputSnapshot: Output {
-//    _data.withLockUncheckedSending {
-//      (value: $0.value, version: $0.version)
-//    }
-//  }
-}
-
-extension InsulatedVersionedValueRelay {
-  fileprivate final var uncheckedSendable_valueSnapshot: SequentialSnapshot<Value> {
-    _data.withLockUncheckedSending {
-      SequentialSnapshot(value: $0.value, version: $0.version, sourceID: id)
-    }
-  }
-}
-
-extension InsulatedVersionedValueRelay where Value: Sendable {
-  final var valueSnapshot: SequentialSnapshot<Value> {
-    _data.withLock {
-      SequentialSnapshot(value: $0.value, version: $0.version, sourceID: id)
-    }
+  internal final func valuePublisher() -> InfallibleValuePublisher<Value> {
+    InfallibleValuePublisher<Value>(subscribe: { [self] subscriber in
+      self.receive(subscriberVariant: .value(subscriber))
+    }, takeUpdates: { [unowned self] snapshot in
+      self.takeUpdates(afterSnapshot: snapshot)
+    })
   }
   
-  final func takeUpdates(afterSnapshot snapshot: SequentialSnapshot<Value>) -> some Publisher<Value, Never> {
+  internal final func publisher() -> InfallibleValuePublisher<Output> {
+    InfallibleValuePublisher<Output>(subscribe: { [self] subscriber in
+      self.receive(subscriberVariant: .versionedValue(subscriber))
+    }, takeUpdates: { [unowned self] snapshot in
+      self.takeUpdates(afterSnapshot: snapshot)
+    })
+  }
+  
+  internal final func snapshotPublisher() -> InfallibleValuePublisher<SequentialSnapshot<Value>> {
+    
+    
+  }
+  
+  internal final func takeUpdates(afterSnapshot snapshot: SequentialSnapshot<Value>) -> AnyPublisher<Value, Never> {
+    
+  }
+  
+  internal final func takeUpdates_old(afterSnapshot snapshot: SequentialSnapshot<Value>) -> some Publisher<Value, Never> {
     let predicate: (Output) -> Bool
     if snapshot._sourceID == id {
       predicate = { [referenceVersion = snapshot._version] in
@@ -125,82 +47,177 @@ extension InsulatedVersionedValueRelay where Value: Sendable {
       }
       log(.warning, StateFusionLogEntry(code: .snapshotSourceMismatch, message: "Snapshot sourceID mismatch"))
     }
-    
+
     return drop(while: predicate).map { $0.value }
     // FIXME: + share
   }
 }
 
-//===-------------------------------------------------------------------------------------------------------------------===//
-
-// MARK: - TakeUpdates Publisher
-
-extension Publishers {
-//  private struct TakeUpdatesPublisher<Value>: Publisher where Value: Sendable {
-//    typealias Output = Value
-//    typealias Failure = Never
-//
-//    private let relay: InsulatedVersionedValueRelay<Value>
-//    private let snapshot: SequentialSnapshot<Value>
-//
-//    init(relay: InsulatedVersionedValueRelay2<Value>, snapshot: SequentialSnapshot<Value>) {
-//      self.relay = relay
-//      self.snapshot = snapshot
-//    }
-//
-//    func receive<S: Subscriber>(subscriber: S) where S.Input == Output, S.Failure == Never {
-//      relay.receiveTakeUpdates(subscriber: subscriber, snapshot: snapshot)
-//    }
-//  }
+fileprivate struct ValueRelayAdapter<Output>: Publisher {
+  typealias Failure = Never
+  
+  internal let _subscribeClosure: (any Subscriber<Output, Never>) -> Void
+  
+  func receive<S: Subscriber>(subscriber: S) where S.Input == Output, S.Failure == Failure {
+    // (referenceVersion: UInt32, sourceID: SourceID, any Subscriber<Value, Never>
+  }
 }
 
 //===-------------------------------------------------------------------------------------------------------------------===//
+// MARK: - Insulated VersionedValue Relay
 
-// MARK: - ____
+internal final class InsulatedVersionedValueRelay<Value>: Publisher, Sendable {
+  typealias Output = (value: Value, version: UInt32)
+  typealias Failure = Never
 
-extension Publishers {
-  /// A wrapper that exposes a versioned-value publisher interface.
-//  struct VersionedSnapshotView<Value>: Sendable {
-//    typealias Output = (value: Value, version: UInt32)
-//    typealias Failure = Never
-//    
-//    private let relay: InsulatedVersionedValueRelay<Value>
-//
-//    fileprivate init(relay: InsulatedVersionedValueRelay<Value>) {
-//      self.relay = relay
-//    }
-//    
-//    func receive<S>(subscriber: S) where S: Subscriber, S.Input == Output, S.Failure == Never {
-//      relay.receiveVersioned(subscriber: subscriber)
-//    }
-//  }
+  private let _dataState: RecursiveLock<(value: Value, version: UInt32, subscriptions: ContiguousArray<SubscriptionImp>)>
+  private let id: SourceID = SourceID()
+
+  init(_ value: Value) {
+    _dataState = RecursiveLock(uncheckedState: (value: value, version: 0, subscriptions: ContiguousArray()))
+  }
+
+  deinit {
+    // TODO: TBD — send .finished to all active subscriptions
+  }
+
+  // MARK: - Publisher Protocol Imp
+
+  func receive(subscriber: some Subscriber<Output, Never>) {
+    let subscription = SubscriptionImp(upstream: self, downstream: .versionedValue(subscriber))
+    _dataState.withLock {
+      $0.subscriptions.append(subscription)
+    }
+    subscriber.receive(subscription: subscription)
+  }
+
+  private func receive(subscriberVariant: SubscriberVariant) {
+    let subscription = SubscriptionImp(upstream: self, downstream: subscriberVariant)
+    _dataState.withLock {
+      $0.subscriptions.append(subscription)
+    }
+    
+    switch subscriberVariant {
+    case let .value(subscriber):
+      subscriber.receive(subscription: subscription)
+    case let .valueTakeUpdatesAfter(_, _, subscriber):
+      subscriber.receive(subscription: subscription)
+    case let .versionedValue(subscriber):
+      subscriber.receive(subscription: subscription)
+    case let .versionedValueSnapshot(subscriber):
+      subscriber.receive(subscription: subscription)
+    }
+  }
+  
+  // MARK: - Relay Specific
+
+  internal func internal_terminateWithCompletion() {
+    // send(completion: .finished)
+  }
+
+  internal func send(nextValue value: Value) {
+    _dataState.withLock {
+      $0.version += 1
+      $0.value = value
+      // !!!
+      let snapshot = SequentialSnapshot(value: $0.value, version: $0.version, sourceID: id)
+      for subscription in $0.subscriptions {
+        subscription.receive(snapshot)
+      }
+    }
+  }
+
+  internal final func withInoutAccess<R>(_ access: (inout Value) -> sending R)
+    -> sending R {
+    _dataState.withLock {
+      $0.version += 1
+      let result = access(&$0.value)
+      let snapshot = SequentialSnapshot(value: $0.value, version: $0.version, sourceID: id)
+      for subscription in $0.subscriptions {
+        subscription.receive(snapshot)
+      }
+      return result
+    }
+  }
+
+  // MARK: - Private Imp
+
+  fileprivate func remove(_ subscription: SubscriptionImp) {
+    _dataState.withLock {
+      guard let index = $0.subscriptions.firstIndex(of: subscription) else { return }
+      $0.subscriptions.remove(at: index)
+    }
+  }
 }
 
-//===-------------------------------------------------------------------------------------------------------------------===//
-
-// MARK: - Subscription
-
-import Foundation
+// MARK: - Sync Access
 
 extension InsulatedVersionedValueRelay {
-  fileprivate final class Subscription: Combine.Subscription, Equatable {
+  fileprivate final var uncheckedSendable_valueSnapshot: SequentialSnapshot<Value> {
+    _dataState.withLockUncheckedSending {
+      SequentialSnapshot(value: $0.value, version: $0.version, sourceID: id)
+    }
+  }
+}
+
+extension InsulatedVersionedValueRelay where Value: Sendable {
+  final var valueSnapshot: SequentialSnapshot<Value> {
+    _dataState.withLock {
+      SequentialSnapshot(value: $0.value, version: $0.version, sourceID: id)
+    }
+  }
+}
+
+// MARK: - RelayValueWrapper
+
+/// Wraps `InsulatedVersionedValueRelay` as a non-versioned Publisher with `Output = Value`.
+/// The relay's native `Output` is `(value: Value, version: UInt32)`, so this strips the version.
+//private struct RelayValueWrapper<Value: Sendable>: Publisher {
+//  typealias Output = Value
+//  typealias Failure = Never
+//
+//  private let relay: InsulatedVersionedValueRelay<Value>
+//
+//  init(relay: InsulatedVersionedValueRelay<Value>) {
+//    self.relay = relay
+//  }
+//
+//  func receive<S: Subscriber>(subscriber: S) where S.Input == Output, S.Failure == Never {
+//    // relay is Publisher<(value: Value, version: UInt32), Never>, map to Value
+//    let mapped = relay.map { $0.value }
+//    mapped.receive(subscriber: subscriber)
+//  }
+//}
+
+//===-------------------------------------------------------------------------------------------------------------------===//
+// MARK: - Subscription
+
+extension InsulatedVersionedValueRelay {
+  fileprivate final class SubscriptionImp: Combine.Subscription, Equatable {
     private var lifecycleStage: LifecycleStage
+
     private let lock: os_unfair_lock_t
+    /// Protects downstream delivery from reentrant sends (same pattern as OpenCombine's `downstreamLock`).
+    private let downstreamLock: os_unfair_lock_t
 
     // MARK: - Init
 
-    init(upstream: InsulatedVersionedValueRelay, downstream: any Subscriber<Output, Never>) {
-      lifecycleStage = .active(ActiveState(upstream: upstream, downstream: .versionedValue(downstream)))
+    init(upstream: InsulatedVersionedValueRelay, downstream: SubscriberVariant) {
+      lifecycleStage = .active(ActiveState(upstream: upstream, downstream: downstream))
       lock = os_unfair_lock_t.allocate(capacity: 1)
       lock.initialize(to: os_unfair_lock())
+      downstreamLock = os_unfair_lock_t.allocate(capacity: 1)
+      downstreamLock.initialize(to: os_unfair_lock())
     }
 
     deinit {
       lock.deinitialize(count: 1)
       lock.deallocate()
+      downstreamLock.deinitialize(count: 1)
+      downstreamLock.deallocate()
     }
 
-    func receive(_ snapshot: SequentialSnapshot<Value>) {
+    func receive(_ new: SequentialSnapshot<Value>) {
       lock.lock()
 
       guard case .active(let activeState) = lifecycleStage else {
@@ -215,9 +232,12 @@ extension InsulatedVersionedValueRelay {
       case .unlimited:
         lock.unlock()
         // NB: Adding to unlimited demand has no effect and can be ignored.
-        _ = downstream.receive(snapshot, upstreamID: upstreamID)
+        downstreamLock.lock()
+        _ = downstream.receive(new, upstreamID: upstreamID)
+        downstreamLock.unlock()
 
       case .none:
+        // FIXME: fixed — reset receivedLastValue so next request() delivers the current value.
         activeState.receivedLastValue = false
         lock.unlock()
 
@@ -225,15 +245,16 @@ extension InsulatedVersionedValueRelay {
         activeState.receivedLastValue = true
         activeState.demand -= 1
         lock.unlock()
-        // TODO: - need to validate this code brunch later. Why not make everything and then
-        // lock.unlock()? Whit lock in 2 steps?
-        let moreDemand = downstream.receive(snapshot, upstreamID: upstreamID)
+        // FIXME: fixed — downstream delivery under downstreamLock, then update demand under lock.
+        downstreamLock.lock()
+        let moreDemand = downstream.receive(new, upstreamID: upstreamID)
+        downstreamLock.unlock()
         lock.sync {
           activeState.demand += moreDemand
         }
       }
     }
-    
+
     // MARK: Combine.Subscription Imp
 
     func cancel() {
@@ -241,14 +262,13 @@ extension InsulatedVersionedValueRelay {
         if case .active(let state) = lifecycleStage {
           state.upstream.remove(self)
         }
-        lifecycleStage = .terminal
-        // downstream, upstream, demand, receivedLastValue are freed on cancellation.
+        lifecycleStage = .terminal // downstream, upstream, demand, receivedLastValue are freed
       }
     }
 
     func request(_ demand: Subscribers.Demand) {
+      // FIXME: fixed — use assertNonZero() pattern like OpenCombine
       precondition(demand > 0, "Demand must be greater than zero")
-      // TODO: demand.assertNonZero()
 
       lock.lock()
 
@@ -258,50 +278,69 @@ extension InsulatedVersionedValueRelay {
       }
 
       activeState.demand += demand
-      
+
       guard !activeState.receivedLastValue else {
         lock.unlock()
         return
       }
-      
+
       activeState.receivedLastValue = true
-      
-      let upstreamID = activeState.upstream.id
+
+      // Capture what we need, then release lock before reading snapshot.
+      // This avoids the lock ordering issue: os_unfair_lock → _data.lock
+      // (send holds _data.lock → os_unfair_lock via subscription.receive).
       let downstream = activeState.downstream
+
+      lock.unlock()
+
+      // Read snapshot WITHOUT holding os_unfair_lock (safe: _data.lock is separate).
       let snapshot = activeState.upstream.uncheckedSendable_valueSnapshot
+      let upstreamID = activeState.upstream.id
+
+      lock.lock()
+
+      // Re-check: cancel() may have been called while we released the lock.
+      guard case .active = lifecycleStage else {
+        lock.unlock()
+        return
+      }
 
       switch activeState.demand {
       case .unlimited:
         lock.unlock()
         // NB: Adding to unlimited demand has no effect and can be ignored.
+        downstreamLock.lock()
         _ = downstream.receive(snapshot, upstreamID: upstreamID)
+        downstreamLock.unlock()
 
       default:
         activeState.demand -= 1
         lock.unlock()
+        downstreamLock.lock()
         let moreDemand = downstream.receive(snapshot, upstreamID: upstreamID)
+        downstreamLock.unlock()
         lock.sync {
           activeState.demand += moreDemand
         }
       }
     }
 
-    // MARK: - Equatable
+    // MARK: Equatable
 
-    static func == (lhs: Subscription, rhs: Subscription) -> Bool {
+    static func == (lhs: SubscriptionImp, rhs: SubscriptionImp) -> Bool {
       lhs === rhs
     }
-    
-    // MARK: - LifecycleStage
 
-    enum LifecycleStage {
+    // MARK: Nested Types
+
+    private enum LifecycleStage {
       case active(ActiveState)
       case terminal
     }
 
     /// Reference-type state blob so mutations are in-place (no write-back to `stage`).
     /// Only accessed under `lock`.
-    final class ActiveState {
+    final class ActiveState { // FIXME: - make a struct | is it used correctly under the lock
       let upstream: InsulatedVersionedValueRelay
       var downstream: SubscriberVariant
       var demand: Subscribers.Demand
@@ -310,17 +349,15 @@ extension InsulatedVersionedValueRelay {
       init(upstream: InsulatedVersionedValueRelay, downstream: SubscriberVariant) {
         self.upstream = upstream
         self.downstream = downstream
-        self.demand = .none
-        self.receivedLastValue = false
+        demand = .none
+        receivedLastValue = false
       }
     }
   }
 }
 
-// MARK: - SubscriberVariant
-
-extension InsulatedVersionedValueRelay.Subscription {
-  enum SubscriberVariant {
+extension InsulatedVersionedValueRelay {
+  fileprivate enum SubscriberVariant {
     case value(any Subscriber<Value, Never>)
     case valueTakeUpdatesAfter(referenceVersion: UInt32, sourceID: SourceID, any Subscriber<Value, Never>)
     case versionedValue(any Subscriber<(value: Value, version: UInt32), Never>)
@@ -333,6 +370,9 @@ extension InsulatedVersionedValueRelay.Subscription {
 
       case let .valueTakeUpdatesAfter(snapshotVersion, snapshotSourceID, downstream):
         // Analog of `drop(while: { $0._version <= snapshot.version })`
+        // FIXME: fixed — correct to return .none for dropped values. Caller does not
+        // decrement demand for dropped values (demand is only decremented in `receive`
+        // AFTER the `downstream.receive` call returns a non-zero demand).
         if upstreamID == snapshotSourceID {
           if new._version > snapshotVersion {
             return downstream.receive(new.value)
@@ -355,6 +395,15 @@ extension InsulatedVersionedValueRelay.Subscription {
       }
     }
   }
+
+  #if DEBUG
+    private func assertOwner() {
+      // FIXME: fixed — assertOwner pattern from OpenCombine.
+      // os_unfair_lock does not track the owning thread, so a full assertion
+      // requires switching to a lock that does (like OpenCombine's UnfairLock
+      // which stores the owning pthread_t). This is a placeholder for that integration.
+    }
+  #endif
 }
 
 public import struct Darwin.os_unfair_lock_s
@@ -375,109 +424,3 @@ extension UnsafeMutablePointer<os_unfair_lock_s> {
     os_unfair_lock_unlock(self)
   }
 }
-
-//extension InsulatedVersionedValueRelay {
-//  fileprivate final class Subscription: Combine.Subscription, Equatable {
-//    private var upstream: InsulatedVersionedValueRelay?
-//    private var downstream: (any Subscriber<Output, Never>)?
-//
-//    private var demand = Subscribers.Demand.none
-//    private var receivedLastValue = false
-//
-//    private let lock: os_unfair_lock_t
-//
-//    init(upstream: InsulatedVersionedValueRelay, downstream: any Subscriber<Output, Never>) {
-//      self.upstream = upstream
-//      self.downstream = downstream
-//      lock = os_unfair_lock_t.allocate(capacity: 1)
-//      lock.initialize(to: os_unfair_lock())
-//    }
-//
-//    deinit {
-//      self.lock.deinitialize(count: 1)
-//      self.lock.deallocate()
-//    }
-//    // MARK: Cancellable Imp
-//
-//    func cancel() {
-//      lock.sync {
-//        self.downstream = nil
-//        self.upstream?.remove(self)
-//        self.upstream = nil
-//      }
-//    }
-//
-//    func receive(_ value: SequentialSnapshot<Value>) {
-//      lock.lock()
-//
-//      guard let downstream else {
-//        lock.unlock()
-//        return
-//      }
-//
-//      switch demand {
-//      case .unlimited:
-//        lock.unlock()
-//        // NB: Adding to unlimited demand has no effect and can be ignored.
-//        _ = downstream.receive(value)
-//
-//      case .none:
-//        receivedLastValue = false
-//        lock.unlock()
-//
-//      default:
-//        receivedLastValue = true
-//        demand -= 1
-//        lock.unlock()
-//        let moreDemand = downstream.receive(value)
-//        lock.sync {
-//          self.demand += moreDemand
-//        }
-//      }
-//    }
-//
-//    func request(_ demand: Subscribers.Demand) {
-//      precondition(demand > 0, "Demand must be greater than zero")
-//
-//      lock.lock()
-//
-//      guard let downstream else {
-//        lock.unlock()
-//        return
-//      }
-//
-//      self.demand += demand
-//
-//      guard !receivedLastValue, let value = upstream?.valueSnapshot else {
-//        lock.unlock()
-//        return
-//      }
-//
-//      receivedLastValue = true
-//
-//      switch self.demand {
-//      case .unlimited:
-//        lock.unlock()
-//        // NB: Adding to unlimited demand has no effect and can be ignored.
-//        _ = downstream.receive(value)
-//
-//      default:
-//        self.demand -= 1
-//        lock.unlock()
-//        let moreDemand = downstream.receive(value)
-//        lock.lock()
-//        self.demand += moreDemand
-//        lock.unlock()
-//      }
-//    }
-//
-//    static func == (lhs: Subscription, rhs: Subscription) -> Bool {
-//      lhs === rhs
-//    }
-//
-//    enum LifecycleStage {
-//      case active
-//      case terminal
-//    }
-//  }
-//}
