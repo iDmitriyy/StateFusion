@@ -10,25 +10,31 @@ import Foundation
 import Synchronization
 
 extension InsulatedVersionedValueRelay {
-  internal final func valuePublisher() -> InfallibleValuePublisher<Value> {
+  internal final func asValuePublisher() -> InfallibleValuePublisher<Value> {
     InfallibleValuePublisher<Value>(subscribe: { [self] subscriber in
       self.receive(subscriberVariant: .value(subscriber))
+    }, getCurrentValue: { [unowned self] in
+      self._dataState.withLockUncheckedSending { $0.value }
     })
   }
   
-  internal final func versionedValuePublisher() -> InfallibleValuePublisher<(value: Value, version: UInt32)> {
+  internal final func asVersionedValuePublisher() -> InfallibleValuePublisher<(value: Value, version: UInt32)> {
     InfallibleValuePublisher<Output>(subscribe: { [self] subscriber in
       self.receive(subscriberVariant: .versionedValue(subscriber))
+    }, getCurrentValue: {
+      self._dataState.withLockUncheckedSending { ($0.value, $0.version) }
     })
   }
   
-  internal final func snapshotPublisher() -> InfallibleValuePublisher<SequentialSnapshot<Value>> {
+  internal final func asSnapshotPublisher() -> InfallibleValuePublisher<SequentialSnapshot<Value>> {
     InfallibleValuePublisher(subscribe: { [self] subscriber in
       self.receive(subscriberVariant: .versionedValueSnapshot(subscriber))
+    }, getCurrentValue: { [unowned self] in
+      self.uncheckedSendable_valueSnapshot
     })
   }
   
-  internal final func takeUpdates(afterSnapshot snapshot: SequentialSnapshot<Value>) -> some Publisher<Value, Never> {
+  internal final func takeUpdates(afterSnapshot snapshot: SequentialSnapshot<Value>) -> some Publisher<Value, Never> { // TODO: InfalliblePublisher
     ValueRelayAdapter(_subscribeClosure: { [self] subscriber in
       self.receive(subscriberVariant: .valueTakeUpdatesAfter(referenceVersion: snapshot._version,
                                                              sourceID: snapshot._sourceID,
@@ -60,7 +66,7 @@ fileprivate struct ValueRelayAdapter<Output>: Publisher {
   internal let _subscribeClosure: (any Subscriber<Output, Never>) -> Void
   
   func receive<S: Subscriber>(subscriber: S) where S.Input == Output, S.Failure == Failure {
-    // (referenceVersion: UInt32, sourceID: SourceID, any Subscriber<Value, Never>
+    _subscribeClosure(subscriber)
   }
 }
 
@@ -173,27 +179,6 @@ extension InsulatedVersionedValueRelay where Value: Sendable {
     }
   }
 }
-
-// MARK: - RelayValueWrapper
-
-/// Wraps `InsulatedVersionedValueRelay` as a non-versioned Publisher with `Output = Value`.
-/// The relay's native `Output` is `(value: Value, version: UInt32)`, so this strips the version.
-//private struct RelayValueWrapper<Value: Sendable>: Publisher {
-//  typealias Output = Value
-//  typealias Failure = Never
-//
-//  private let relay: InsulatedVersionedValueRelay<Value>
-//
-//  init(relay: InsulatedVersionedValueRelay<Value>) {
-//    self.relay = relay
-//  }
-//
-//  func receive<S: Subscriber>(subscriber: S) where S.Input == Output, S.Failure == Never {
-//    // relay is Publisher<(value: Value, version: UInt32), Never>, map to Value
-//    let mapped = relay.map { $0.value }
-//    mapped.receive(subscriber: subscriber)
-//  }
-//}
 
 //===-------------------------------------------------------------------------------------------------------------------===//
 // MARK: - Subscription

@@ -20,7 +20,8 @@ public final class InfallibleValuePublisher<Output>: Publisher {
   /* private */ internal let _subscribeClosure: (any Subscriber<Output, Never>) -> Void
 
   @inlinable
-  internal init<P: Publisher>(retained_unverifiedValuePublisher base: P)
+  internal init<P: Publisher>(retained_unverifiedValuePublisher base: P,
+                              getCurrentValue _: @escaping () -> Output)
     where P.Output == Output, P.Failure == Failure {
     _subscribeClosure = { [base] subscriber in
       base.receive(subscriber: subscriber)
@@ -28,7 +29,8 @@ public final class InfallibleValuePublisher<Output>: Publisher {
   }
   
   @inlinable
-  internal init(subscribe: @escaping (any Subscriber<Output, Failure>) -> Void) {
+  internal init(subscribe: @escaping (any Subscriber<Output, Failure>) -> Void,
+                getCurrentValue _: @escaping () -> Output) {
     _subscribeClosure = subscribe
   }
 
