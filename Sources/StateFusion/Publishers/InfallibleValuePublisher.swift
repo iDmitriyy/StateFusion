@@ -18,12 +18,9 @@ public final class InfallibleValuePublisher<Output>: Publisher {
 
   @usableFromInline
   /* private */ internal let _subscribeClosure: (any Subscriber<Output, Never>) -> Void
-  
-  internal let _takeUpdates: (SequentialSnapshot<Output>) -> AnyPublisher<Output, Never>
 
   @inlinable
-  internal init<P: Publisher>(retained_unverifiedValuePublisher base: P,
-                              takeUpdates: (SequentialSnapshot<Output>) -> any Publisher<Output, Never>)
+  internal init<P: Publisher>(retained_unverifiedValuePublisher base: P)
     where P.Output == Output, P.Failure == Failure {
     _subscribeClosure = { [base] subscriber in
       base.receive(subscriber: subscriber)
@@ -31,19 +28,13 @@ public final class InfallibleValuePublisher<Output>: Publisher {
   }
   
   @inlinable
-  internal init(subscribe: @escaping (any Subscriber<Output, Failure>) -> Void,
-                takeUpdates: (SequentialSnapshot<Output>) -> AnyPublisher<Output, Failure>) {
+  internal init(subscribe: @escaping (any Subscriber<Output, Failure>) -> Void) {
     _subscribeClosure = subscribe
-    
   }
 
   @inlinable
   public final func receive<S: Subscriber>(subscriber: S) where S.Input == Output, S.Failure == Never {
     _subscribeClosure(subscriber)
-  }
-  
-  public final func takeUpdates(afterSnapshot snapshot: SequentialSnapshot<Output>) -> some Publisher<Output, Never> {
-    _takeUpdates(snapshot)
   }
 }
 

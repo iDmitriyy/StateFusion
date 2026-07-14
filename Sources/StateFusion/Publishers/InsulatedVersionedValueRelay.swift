@@ -13,26 +13,27 @@ extension InsulatedVersionedValueRelay {
   internal final func valuePublisher() -> InfallibleValuePublisher<Value> {
     InfallibleValuePublisher<Value>(subscribe: { [self] subscriber in
       self.receive(subscriberVariant: .value(subscriber))
-    }, takeUpdates: { [unowned self] snapshot in
-      self.takeUpdates(afterSnapshot: snapshot)
     })
   }
   
-  internal final func publisher() -> InfallibleValuePublisher<Output> {
+  internal final func versionedValuePublisher() -> InfallibleValuePublisher<(value: Value, version: UInt32)> {
     InfallibleValuePublisher<Output>(subscribe: { [self] subscriber in
       self.receive(subscriberVariant: .versionedValue(subscriber))
-    }, takeUpdates: { [unowned self] snapshot in
-      self.takeUpdates(afterSnapshot: snapshot)
     })
   }
   
   internal final func snapshotPublisher() -> InfallibleValuePublisher<SequentialSnapshot<Value>> {
-    
-    
+    InfallibleValuePublisher(subscribe: { [self] subscriber in
+      self.receive(subscriberVariant: .versionedValueSnapshot(subscriber))
+    })
   }
   
-  internal final func takeUpdates(afterSnapshot snapshot: SequentialSnapshot<Value>) -> AnyPublisher<Value, Never> {
-    
+  internal final func takeUpdates(afterSnapshot snapshot: SequentialSnapshot<Value>) -> some Publisher<Value, Never> {
+    ValueRelayAdapter(_subscribeClosure: { [self] subscriber in
+      self.receive(subscriberVariant: .valueTakeUpdatesAfter(referenceVersion: snapshot._version,
+                                                             sourceID: snapshot._sourceID,
+                                                             subscriber))
+    })
   }
   
   internal final func takeUpdates_old(afterSnapshot snapshot: SequentialSnapshot<Value>) -> some Publisher<Value, Never> {
@@ -139,6 +140,11 @@ internal final class InsulatedVersionedValueRelay<Value>: Publisher, Sendable {
       return result
     }
   }
+  
+  // internal final func withMutationTrackingAccess<R>(_ access: (inout Value) -> sending R)
+  // -> sending R {
+  //
+  // }
 
   // MARK: - Private Imp
 

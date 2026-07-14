@@ -38,3 +38,9 @@ extension Task {
     bag.insert(self)
   }
 }
+
+/*
+ TODO:
+ - passing existential to generic func args can make unneeded unpacking. Check places where unpacking is redundant.
+ 
+ */
