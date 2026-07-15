@@ -14,7 +14,7 @@ public import Combine
 /// Use this when you only need to subscribe to values and don't need `takeUpdates(afterSnapshot:)` or `valueSnapshot`.
 /// For versioned access, use `VersionedValuePublisher` instead.
 
-typealias InfallibleValuePublisher<Output> = CurrentValuePublisher<Output, Never>
+public typealias InfallibleValuePublisher<Output> = CurrentValuePublisher<Output, Never>
 
 //===-------------------------------------------------------------------------------------------------------------------===//
 
@@ -37,6 +37,13 @@ public struct CurrentValuePublisher<Output, Failure: Error>: Publisher {
   internal init(subscribe: @escaping (any Subscriber<Output, Failure>) -> Void,
                 getCurrentValue _: @escaping () -> Output) {
     _subscribeClosure = subscribe
+  }
+  
+  @inlinable
+  internal init<P: Publisher>(retained_unverifiedValuePublisher base: P) where P.Output == Output, P.Failure == Failure {
+    _subscribeClosure = { [base] subscriber in
+      base.receive(subscriber: subscriber)
+    }
   }
 
   @inlinable

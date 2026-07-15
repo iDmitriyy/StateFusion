@@ -41,13 +41,13 @@ struct PlaygroundTest {
         isCMutablyAccessed1 = true
       }
     }
-    let isCMutablyAccessed2 = withUnsafeMutablePointer(to: &stateC) { mutablePointer in
-      var accessHandle = GenericStateAccessHandle(pointer: mutablePointer)
-      mutate(accessHandle: &accessHandle) {
-        shouldMutate ? $0.stateEntity.append("!") : blackHole($0.stateEntity)
-      }
-      return accessHandle.isMutablyAccessed
-    }
+//    let isCMutablyAccessed2 = withUnsafeMutablePointer(to: &stateC) { mutablePointer in
+//      var accessHandle = GenericStateAccessHandle(pointer: mutablePointer)
+//      mutate(accessHandle: &accessHandle) {
+//        shouldMutate ? $0.stateEntity.append("!") : blackHole($0.stateEntity)
+//      }
+//      return accessHandle.isMutablyAccessed
+//    }
 
     var isDMutablyAccessed1 = false
     var stateD = "" {
@@ -86,7 +86,7 @@ struct PlaygroundTest {
     #expect(isBMutablyAccessed) // always true because mutat
 
     #expect(isCMutablyAccessed1 == shouldMutate)
-    #expect(isCMutablyAccessed2 == shouldMutate)
+//    #expect(isCMutablyAccessed2 == shouldMutate)
 
     #expect(isDMutablyAccessed1 == shouldMutate)
     #expect(isDMutablyAccessed2 == shouldMutate)

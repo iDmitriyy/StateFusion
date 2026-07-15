@@ -17,7 +17,7 @@ public import Combine
 ///   Typically, this is needed inside the interactor itself.
 @propertyWrapper
 public final class PublishedEvent<Output> {
-  public final let wrappedValue: InfalliblePublisher<Output>
+  public final let wrappedValue: AnyInfalliblePublisher<Output>
 
   public final var projectedValue: PublishedEvent<Output> {
     self

@@ -142,7 +142,7 @@ extension PublishedState where StateEntity: AnyObject {
 
 @usableFromInline
 internal final class _PublishedState<StateEntity: Sendable>: @unchecked Sendable {
-  private weak var _shared_publisher: InfallibleValuePublisher<StateEntity>?
+//  private weak var _shared_publisher: InfallibleValuePublisher<StateEntity>?
 
   @usableFromInline
   /* private */ internal let _private_use_only_subject: CurrentValueSubject<StateEntity, Never>
@@ -165,15 +165,15 @@ internal final class _PublishedState<StateEntity: Sendable>: @unchecked Sendable
   }
 
   fileprivate func publisher() -> InfallibleValuePublisher<StateEntity> {
-    _lock.lock(); defer { _lock.unlock() }
+//    _lock.lock(); defer { _lock.unlock() }
 
     let publisher: InfallibleValuePublisher<StateEntity>
-    if let _publisher = _shared_publisher {
-      publisher = _publisher
-    } else {
+//    if let _publisher = _shared_publisher {
+//      publisher = _publisher
+//    } else {
       publisher = InfallibleValuePublisher(retained_unverifiedValuePublisher: _private_use_only_subject)
-      _shared_publisher = publisher
-    }
+//      _shared_publisher = publisher
+//    }
     return publisher
   }
 
