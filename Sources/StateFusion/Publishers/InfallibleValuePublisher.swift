@@ -13,11 +13,16 @@ public import Combine
 ///
 /// Use this when you only need to subscribe to values and don't need `takeUpdates(afterSnapshot:)` or `valueSnapshot`.
 /// For versioned access, use `VersionedValuePublisher` instead.
-public final class InfallibleValuePublisher<Output>: Publisher {
-  public typealias Failure = Never
 
+typealias InfallibleValuePublisher<Output> = CurrentValuePublisher<Output, Never>
+
+//===-------------------------------------------------------------------------------------------------------------------===//
+
+// MARK: - CurrentValuePublisher (Non-Versioned, Generic Failure)
+
+public struct CurrentValuePublisher<Output, Failure: Error>: Publisher {
   @usableFromInline
-  /* private */ internal let _subscribeClosure: (any Subscriber<Output, Never>) -> Void
+  /* private */ internal let _subscribeClosure: (any Subscriber<Output, Failure>) -> Void
 
   @inlinable
   internal init<P: Publisher>(retained_unverifiedValuePublisher base: P,
@@ -27,7 +32,7 @@ public final class InfallibleValuePublisher<Output>: Publisher {
       base.receive(subscriber: subscriber)
     }
   }
-  
+
   @inlinable
   internal init(subscribe: @escaping (any Subscriber<Output, Failure>) -> Void,
                 getCurrentValue _: @escaping () -> Output) {
@@ -35,30 +40,6 @@ public final class InfallibleValuePublisher<Output>: Publisher {
   }
 
   @inlinable
-  public final func receive<S: Subscriber>(subscriber: S) where S.Input == Output, S.Failure == Never {
-    _subscribeClosure(subscriber)
-  }
-}
-
-
-
-//===-------------------------------------------------------------------------------------------------------------------===//
-
-// MARK: - CurrentValuePublisher (Non-Versioned, Generic Failure)
-
-public struct CurrentValuePublisher<Output, Failure: Error>: Publisher {
-  /// private
-  @usableFromInline
-  /* private */ internal let _subscribeClosure: (any Subscriber<Output, Failure>) -> Void
-
-  internal init<P: Publisher>(retained_unverifiedValuePublisher base: P,
-                              getCurrentValue: @escaping () -> Output)
-    where P.Output == Output, P.Failure == Failure {
-    _subscribeClosure = { [base] subscriber in
-      base.receive(subscriber: subscriber)
-    }
-  }
-
   public func receive<S: Subscriber>(subscriber: S) where S.Input == Output, S.Failure == Failure {
     _subscribeClosure(subscriber)
   }
@@ -79,7 +60,7 @@ extension CurrentValuePublisher {
 ///
 /// Supports `takeUpdates(afterSnapshot:)` for bridging the read-subscribe time gap without duplicates.
 /// Use `valueSnapshot` to atomically read the current state as a `SequentialSnapshot`.
-//public final class VersionedValuePublisher<Output>: Publisher {
+// public final class VersionedValuePublisher<Output>: Publisher {
 //  public typealias Failure = Never
 //
 //  @usableFromInline
@@ -119,4 +100,4 @@ extension CurrentValuePublisher {
 //  public final func receive<S: Subscriber>(subscriber: S) where S.Input == Output, S.Failure == Never {
 //    _subscribeClosure(AnySubscriber(subscriber))
 //  }
-//}
+// }
