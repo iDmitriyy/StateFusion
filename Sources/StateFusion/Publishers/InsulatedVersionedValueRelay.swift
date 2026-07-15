@@ -9,6 +9,8 @@ public import Combine
 import Foundation
 import Synchronization
 
+// MARK: - As Publisher (read-only interface)
+
 extension InsulatedVersionedValueRelay {
   internal final func asValuePublisher() -> InfallibleValuePublisher<Value> {
     InfallibleValuePublisher<Value>(subscribe: { [self] subscriber in
@@ -33,8 +35,12 @@ extension InsulatedVersionedValueRelay {
       self.uncheckedSendable_valueSnapshot
     })
   }
-  
-  internal final func takeUpdates(afterSnapshot snapshot: SequentialSnapshot<Value>) -> some Publisher<Value, Never> { // TODO: InfalliblePublisher
+}
+
+// MARK: - Take Updates
+
+extension InsulatedVersionedValueRelay {
+  internal final func takeUpdates(afterSnapshot snapshot: SequentialSnapshot<Value>) -> some InfalliblePublisher<Value> { // TODO: InfalliblePublisher
     ValueRelayAdapter(_subscribeClosure: { [self] subscriber in
       self.receive(subscriberVariant: .valueTakeUpdatesAfter(referenceVersion: snapshot._version,
                                                              sourceID: snapshot._sourceID,
