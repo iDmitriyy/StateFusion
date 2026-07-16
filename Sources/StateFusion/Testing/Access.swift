@@ -102,7 +102,6 @@ internal final class __MPublishedState<StateEntity: Sendable>: @unchecked Sendab
       var ref = _MutableRef(&stateAndData)
       
       let result = try access(&ref)
-
       return result
   }
 

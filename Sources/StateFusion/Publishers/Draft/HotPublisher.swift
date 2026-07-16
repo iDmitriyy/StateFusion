@@ -34,21 +34,3 @@ final class HotPublisher<T> {
         subject.eraseToAnyPublisher()
     }
 }
-
-extension Publishers {
-  struct SingleElement {}
-}
-
-/*
- ValuePublisher operators:
- map combineLatest prepend scan? merge(if oneOf is ValuePublisher) throttle? flatMap? replaceError? removeDuplicates singleElement
- zip replaceNil(with: T) mapError catch share shareReplay(1) multicast(subject:)
- eraseToAnyPublisher handleEvents breakpoint
- 
- HotPublisher operators:
- debounce delay
- 
- 
- при прямой подписке (без share) removeDuplicates всегда немедленно эмитит значение, потому что каждый раз
- создаётся новый оператор без истории
- */
