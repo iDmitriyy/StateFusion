@@ -9,7 +9,9 @@ import class Foundation.NSRecursiveLock
 import Synchronization
 
 // MARK: - RecursiveLock
+
 import os
+
 @_staticExclusiveOnly
 public struct RecursiveLock<Value: ~Copyable>: ~Copyable {
   private let _lock = NSRecursiveLock()
@@ -82,10 +84,42 @@ extension RecursiveLock where Value: ~Copyable {
   }
 }
 
-//internal final class RecursiveLock2<Value: ~Copyable>: @unchecked Sendable {
-//  private let _lock = NSRecursiveLock()
-//}
-//
-//internal final class RecursiveLock3<Value: ~Copyable>: @unchecked Sendable {
-//
-//}
+internal final class RecursiveLock2<Value: ~Copyable>: @unchecked Sendable {
+  private let _lock = NSRecursiveLock()
+  
+  private var value: Value
+  
+  public init(_ initialValue: consuming sending Value) {
+    value = initialValue
+  }
+  
+  public borrowing func withLockInout<Result: ~Copyable, E: Error>(
+    _ body: (inout sending Value) throws(E) -> sending Result,
+  ) throws(E) -> sending Result {
+    _lock.lock(); defer { _lock.unlock() }
+
+    return try body(&value)
+  }
+  
+  public borrowing func withLockPointer<Result: ~Copyable, E: Error>(
+    _ body: (UnsafeMutablePointer<Value>) throws(E) -> Result,
+  ) throws(E) -> Result {
+    _lock.lock(); defer { _lock.unlock() }
+
+    let result = try withUnsafeMutablePointer(to: &value) { (pointer) throws(E) -> Result in
+      try body(pointer)
+    }
+    return result
+  }
+  
+  public borrowing func withLockMutRef<Result: ~Copyable, E: Error>(
+    _ body: (inout _MutableRef<Value>) throws(E) -> sending Result,
+  ) throws(E) -> sending Result {
+    _lock.lock(); defer { _lock.unlock() }
+
+    var ref = _MutableRef(&value)
+    let result = try body(&ref)
+    
+    return result
+  }
+}

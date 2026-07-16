@@ -283,7 +283,3 @@ extension _PublishedState {
     fatalError()
   }
 }
-enum StateChangeKind {
-  case serialAsync(priority: TaskPriority)
-  case sync
-}
