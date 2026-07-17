@@ -7,6 +7,10 @@
 
 //public import Combine
 
+/// It is like PublishedState but:
+/// - Allows Non-Sendable values
+/// - Shared (unowned) – InsulatedValueRelay is regular class in comparison with ~Copyable PublishedState. You typically want to use it privately with single owner though.
+/// - `PublishedState` do not emit values when not mutable accessed. Concretely, if you call any `mutation` method but only make readonly access, no emission happen in `PublishedState`. `InsulatedValueRelay` allows you to choose, e.g. inout variant will always emit.
 //public final class InsulatedValueRelay<Output>: Subject<Output, Never> { // | Insulated Transactional
 //  internal let _subject: CurrentValueSubject<SequentialSnapshot<Output>, Never>
 //  private let _version: RecursiveLock<UInt32>
