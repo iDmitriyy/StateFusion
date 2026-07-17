@@ -22,33 +22,22 @@ public typealias InfallibleValuePublisher<Output> = CurrentValuePublisher<Output
 
 public struct CurrentValuePublisher<Output, Failure: Error>: Publisher {
   @usableFromInline
-  /* private */ internal let _subscribeClosure: (any Subscriber<Output, Failure>) -> Void
+  /* private */ internal let _base: any Publisher<Output, Failure>
 
   @inlinable
-  internal init<P: Publisher>(retained_unverifiedValuePublisher base: P,
-                              getCurrentValue _: @escaping () -> Output)
-    where P.Output == Output, P.Failure == Failure {
-    _subscribeClosure = { [base] subscriber in
-      base.receive(subscriber: subscriber)
-    }
-  }
-
-  @inlinable
-  internal init(subscribe: @escaping (any Subscriber<Output, Failure>) -> Void,
-                getCurrentValue _: @escaping () -> Output) {
-    _subscribeClosure = subscribe
+  internal init<P: Publisher>(retained_unverifiedValuePublisher base: P) where P.Output == Output, P.Failure == Failure {
+    _base = base
   }
   
   @inlinable
-  internal init<P: Publisher>(retained_unverifiedValuePublisher base: P) where P.Output == Output, P.Failure == Failure {
-    _subscribeClosure = { [base] subscriber in
-      base.receive(subscriber: subscriber)
-    }
+  internal init<P: Publisher>(retained_unverifiedValuePublisher base: P,
+                              getCurrentValue _: @escaping () -> Output) where P.Output == Output, P.Failure == Failure {
+    _base = base
   }
 
   @inlinable
   public func receive<S: Subscriber>(subscriber: S) where S.Input == Output, S.Failure == Failure {
-    _subscribeClosure(subscriber)
+    _base.receive(subscriber: subscriber)
   }
 }
 

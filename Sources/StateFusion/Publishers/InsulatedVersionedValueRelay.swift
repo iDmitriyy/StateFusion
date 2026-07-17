@@ -13,27 +13,36 @@ import Synchronization
 
 extension InsulatedVersionedValueRelay {
   internal final func asValuePublisher() -> InfallibleValuePublisher<Value> {
-    InfallibleValuePublisher<Value>(subscribe: { [self] subscriber in
-      self.receive(subscriberVariant: .value(subscriber))
-    }, getCurrentValue: { [unowned self] in
-      self._dataState.withLockUncheckedSending { $0.value }
+    let adapter = ValueRelayAdapter<Value>(_subscribeClosure: { [self] subscriber in
+      receive(subscriberVariant: .value(subscriber))
     })
+
+    return InfallibleValuePublisher(retained_unverifiedValuePublisher: adapter,
+                                    getCurrentValue: { [unowned self] in
+                                      _dataState.withLockUncheckedSending { $0.value }
+                                    })
   }
-  
+
   internal final func asVersionedValuePublisher() -> InfallibleValuePublisher<(value: Value, version: UInt32)> {
-    InfallibleValuePublisher<Output>(subscribe: { [self] subscriber in
-      self.receive(subscriberVariant: .versionedValue(subscriber))
-    }, getCurrentValue: {
-      self._dataState.withLockUncheckedSending { ($0.value, $0.version) }
+    let adapter = ValueRelayAdapter<(value: Value, version: UInt32)>(_subscribeClosure: { [self] subscriber in
+      receive(subscriberVariant: .versionedValue(subscriber))
     })
+
+    return InfallibleValuePublisher(retained_unverifiedValuePublisher: adapter,
+                                    getCurrentValue: { [unowned self] in
+                                      _dataState.withLockUncheckedSending { ($0.value, $0.version) }
+                                    })
   }
-  
+
   internal final func asSnapshotPublisher() -> InfallibleValuePublisher<SequentialSnapshot<Value>> {
-    InfallibleValuePublisher(subscribe: { [self] subscriber in
-      self.receive(subscriberVariant: .versionedValueSnapshot(subscriber))
-    }, getCurrentValue: { [unowned self] in
-      self.uncheckedSendable_valueSnapshot
+    let adapter = ValueRelayAdapter<SequentialSnapshot<Value>>(_subscribeClosure: { [self] subscriber in
+      receive(subscriberVariant: .versionedValueSnapshot(subscriber))
     })
+
+    return InfallibleValuePublisher(retained_unverifiedValuePublisher: adapter,
+                                    getCurrentValue: { [unowned self] in
+                                      uncheckedSendable_valueSnapshot
+                                    })
   }
 }
 
@@ -42,12 +51,12 @@ extension InsulatedVersionedValueRelay {
 extension InsulatedVersionedValueRelay {
   internal final func takeUpdates(afterSnapshot snapshot: SequentialSnapshot<Value>) -> some InfalliblePublisher<Value> { // TODO: InfalliblePublisher
     ValueRelayAdapter(_subscribeClosure: { [self] subscriber in
-      self.receive(subscriberVariant: .valueTakeUpdatesAfter(referenceVersion: snapshot._version,
-                                                             sourceID: snapshot._sourceID,
-                                                             subscriber))
+      receive(subscriberVariant: .valueTakeUpdatesAfter(referenceVersion: snapshot._version,
+                                                        sourceID: snapshot._sourceID,
+                                                        subscriber))
     })
   }
-  
+
   internal final func takeUpdates_old(afterSnapshot snapshot: SequentialSnapshot<Value>) -> some Publisher<Value, Never> {
     let predicate: (Output) -> Bool
     if snapshot._sourceID == id {
@@ -68,9 +77,9 @@ extension InsulatedVersionedValueRelay {
 
 fileprivate struct ValueRelayAdapter<Output>: Publisher {
   typealias Failure = Never
-  
+
   internal let _subscribeClosure: (any Subscriber<Output, Never>) -> Void
-  
+
   func receive<S: Subscriber>(subscriber: S) where S.Input == Output, S.Failure == Failure {
     _subscribeClosure(subscriber)
   }
@@ -109,7 +118,7 @@ internal final class InsulatedVersionedValueRelay<Value>: Publisher, Sendable {
     _dataState.withLock {
       $0.subscriptions.append(subscription)
     }
-    
+
     switch subscriberVariant {
     case let .value(subscriber):
       subscriber.receive(subscription: subscription)
@@ -121,7 +130,7 @@ internal final class InsulatedVersionedValueRelay<Value>: Publisher, Sendable {
       subscriber.receive(subscription: subscription)
     }
   }
-  
+
   // MARK: - Relay Specific
 
   internal func internal_terminateWithCompletion() {
@@ -152,7 +161,7 @@ internal final class InsulatedVersionedValueRelay<Value>: Publisher, Sendable {
       return result
     }
   }
-  
+
   // internal final func withMutationTrackingAccess<R>(_ access: (inout Value) -> sending R)
   // -> sending R {
   //

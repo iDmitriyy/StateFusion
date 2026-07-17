@@ -28,26 +28,45 @@ struct ValuePublisherOperatorsInit {
         blackHole(currentValueSubject.map { $0 }.map { $0 }.map { $0 }.map { $0 }.map { "\($0)" })
       }
     }
+    
+    let (_, builtinSubjectErased) = performMeasuredAction(count: outer) {  // reference measurement
+      for _ in 1...inner {
+        blackHole(currentValueSubject.map { $0 }.map { $0 }.map { $0 }.map { $0 }.map { "\($0)" }.eraseToAnyPublisher())
+      }
+    }
 
     let (_, valuePublisherA) = performMeasuredAction(count: outer) {
       for _ in 1...inner {
         blackHole(currentValuePublisherA.map { $0 }.map { $0 }.map { $0 }.map { $0 }.map { "\($0)" })
       }
     }
-
-    let (_, valuePublisherB) = performMeasuredAction(count: outer) {
+    // FIXME: - write difference from map2
+    // this variant eliminate nesting in chain "CurrentValuePublisher-Base1-CurrentValuePublisher-Base2..."
+    let (_, valuePublisherB_1) = performMeasuredAction(count: outer) {
       for _ in 1...inner {
         blackHole(currentValuePublisherB.map { $0 }.map { $0 }.map { $0 }.map { $0 }.map { "\($0)" })
       }
     }
+    
+    let (_, valuePublisherB_2) = performMeasuredAction(count: outer) {
+      for _ in 1...inner {
+        blackHole(currentValuePublisherB.map2 { $0 }.map2 { $0 }.map2 { $0 }.map2 { $0 }.map2 { "\($0)" })
+      }
+    }
 
-    let (_, valuePublisherC) = performMeasuredAction(count: outer) {
+    let (_, valuePublisherC_1) = performMeasuredAction(count: outer) {
       for _ in 1...inner {
         blackHole(currentValuePublisherC.map { $0 }.map { $0 }.map { $0 }.map { $0 }.map { "\($0)" })
       }
     }
+    
+    let (_, valuePublisherC_2) = performMeasuredAction(count: outer) {
+      for _ in 1...inner {
+        blackHole(currentValuePublisherC.map2 { $0 }.map2 { $0 }.map2 { $0 }.map2 { $0 }.map2 { "\($0)" })
+      }
+    }
 
-    print("___", builtinSubject, valuePublisherA, valuePublisherB, valuePublisherC)
+    print("___", builtinSubject, builtinSubjectErased, valuePublisherA, valuePublisherB_1, valuePublisherB_2, valuePublisherC_1, valuePublisherC_2)
   }
 }
 
@@ -66,11 +85,21 @@ extension CurrentValuePublisher2 {
     }
     return wrap(unboxingAny: _base)
   }
+  
+  public func map2<T>(_ transform: @escaping (Output) -> T) -> CurrentValuePublisher2<T, Failure> {
+    let map = Publishers.Map(upstream: self, transform: transform)
+    return CurrentValuePublisher2<T, Failure>(retained_unverifiedValuePublisher: map)
+  }
 }
 
 extension CurrentValuePublisher3 {
   public func map<T>(_ transform: @escaping (Output) -> T) -> CurrentValuePublisher3<T, Failure> {
     let map = Publishers.Map(upstream: _base, transform: transform)
+    return CurrentValuePublisher3<T, Failure>(retained_unverifiedValuePublisher: map)
+  }
+  
+  public func map2<T>(_ transform: @escaping (Output) -> T) -> CurrentValuePublisher3<T, Failure> {
+    let map = Publishers.Map(upstream: self, transform: transform)
     return CurrentValuePublisher3<T, Failure>(retained_unverifiedValuePublisher: map)
   }
 }
