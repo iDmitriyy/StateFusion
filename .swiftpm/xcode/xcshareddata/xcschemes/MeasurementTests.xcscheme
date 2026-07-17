@@ -20,6 +20,7 @@
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "MeasurementTests"
                BuildableName = "MeasurementTests"
+               BlueprintName = "MeasurementTests"
                ReferencedContainer = "container:">
             </BuildableReference>
          </TestableReference>

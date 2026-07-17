@@ -112,26 +112,26 @@ internal final class RecursiveLock2<Value: ~Copyable>: @unchecked Sendable {
     return result
   }
   
-  public borrowing func withLockMutRef<Result: ~Copyable, E: Error>(
-    _ body: (inout _MutableRef<Value>) throws(E) -> sending Result,
-  ) throws(E) -> sending Result {
-    _lock.lock(); defer { _lock.unlock() }
-
-    var ref = _MutableRef(&value)
-    let result = try body(&ref)
-    
-    return result
-  }
-  
-  @available(macOS 9999, *)
-  public borrowing func withLockNativeMutRef<Result: ~Copyable, E: Error>(
-    _ body: (inout MutableRef<Value>) throws(E) -> sending Result,
-  ) throws(E) -> sending Result {
-    _lock.lock(); defer { _lock.unlock() }
-
-    var ref = MutableRef(&value)
-    let result = try body(&ref)
-    
-    return result
-  }
+//  public borrowing func withLockMutRef<Result: ~Copyable, E: Error>(
+//    _ body: (borrowing _MutableRef<Value>) throws(E) -> sending Result,
+//  ) throws(E) -> sending Result {
+//    _lock.lock(); defer { _lock.unlock() }
+//
+//    var ref = _MutableRef(&value)
+//    let result = try body(ref)
+//    
+//    return result
+//  }
+//  
+//  @available(macOS 9999, *)
+//  public borrowing func withLockNativeMutRef<Result: ~Copyable, E: Error>(
+//    _ body: (inout MutableRef<Value>) throws(E) -> sending Result,
+//  ) throws(E) -> sending Result {
+//    _lock.lock(); defer { _lock.unlock() }
+//
+//    var ref = MutableRef(&value)
+//    let result = try body(&ref)
+//    
+//    return result
+//  }
 }
