@@ -35,7 +35,7 @@ for target: PackageDescription.Target in package.targets {
   }(&target.swiftSettings)
 }
 
-let swiftFlags = [
-  "-Xfrontend", "-disable-reflection-metadata",
-  "-Xfrontend", "-disable-reflection-names",
-]
+//let swiftFlags = [
+//  "-Xfrontend", "-disable-reflection-metadata",
+//  "-Xfrontend", "-disable-reflection-names",
+//]
