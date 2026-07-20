@@ -50,25 +50,28 @@ extension GenericStateAccessHandle: Sendable {}
 
 @available(macOS 9999, *)
 public struct GenericStateAccessHandle2<StateEntity: ~Copyable>: ~Copyable, ~Escapable {
+  @inlinable @inline(always)
   public var stateEntity: StateEntity {
+    @inlinable @inline(always)
     borrow {
       _mutableRef.value
     }
+    @inlinable @inline(always)
     mutate {
-//      _isMutablyAccessed = true
+      _isMutablyAccessed = true
       return &_mutableRef.value
     }
   }
 
 //  @usableFromInline
-  
-  internal var isMutablyAccessed: Bool {
-    @inlinable @inline(always)
-    consuming get { true }
+//   @inlinable @inline(always)
+//  internal var isMutablyAccessed: Bool {
+//     @inlinable @inline(always)
 //    consuming get { _isMutablyAccessed }
-  }
+//  }
 
-//  private var _isMutablyAccessed: Bool = false
+//  @usableFromInline
+  public var _isMutablyAccessed: Bool = false
 
   /// private
   @usableFromInline

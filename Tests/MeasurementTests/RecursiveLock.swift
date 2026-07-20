@@ -15,7 +15,7 @@ struct RecursiveLockTests {
   @Test func `Access Variants Read`() {
     if #available(macOS 26.0, *) {
       let obj1 = RecursiveLock2Wrapper.shared
-      
+
       let (_, inoutAccess) = performMeasuredAction(count: outer) {
         for _ in 1...inner {
           obj1.withLockInout { dataState in
@@ -23,7 +23,7 @@ struct RecursiveLockTests {
           }
         }
       }
-      
+
       let (_, pointerAccess) = performMeasuredAction(count: outer) {
         for _ in 1...inner {
           obj1.withLockPointer { dataStatePointer in
@@ -31,7 +31,7 @@ struct RecursiveLockTests {
           }
         }
       }
-      
+
       let (_, mutableAccessTracking) = performMeasuredAction(count: outer) {
         for _ in 1...inner {
           obj1.withLockMutableAccess {
@@ -41,15 +41,15 @@ struct RecursiveLockTests {
           }
         }
       }
-      
+
       print("___", inoutAccess, pointerAccess, mutableAccessTracking)
     }
   }
-  
+
   @Test func `Access Variants Write`() {
     if #available(macOS 26.0, *) {
       let obj1 = RecursiveLock2Wrapper.shared
-      
+
       let (_, inoutAccess) = performMeasuredAction(count: outer) {
         for _ in 1...inner {
           obj1.withLockInout { dataState in
@@ -57,7 +57,7 @@ struct RecursiveLockTests {
           }
         }
       }
-      
+
       let (_, pointerAccess) = performMeasuredAction(count: outer) {
         for _ in 1...inner {
           obj1.withLockPointer { dataStatePointer in
@@ -65,7 +65,7 @@ struct RecursiveLockTests {
           }
         }
       }
-      
+
       let (_, mutableAccessTracking) = performMeasuredAction(count: outer) {
         for _ in 1...inner {
           obj1.withLockMutableAccess {
@@ -73,19 +73,37 @@ struct RecursiveLockTests {
           } whenMutablyAccessedDo: { _ in }
         }
       }
-      
+
       if #available(macOS 9999, *) {
+        let (_, mutableAccessNative) = performMeasuredAction(count: outer) {
+          for _ in 1...inner {
+            obj1.withLockMutableAccessNative {
+              $0.stateEntity.number += 1
+            }
+          }
+        }
+
         let (_, mutableAccessNativeTracking) = performMeasuredAction(count: outer) {
           for _ in 1...inner {
             obj1.withLockMutableAccessNative {
               $0.stateEntity.number += 1
-            } whenMutablyAccessedDo: { _ in }
+            } whenMutablyAccessedDo: { _ in
+            }
           }
         }
         
-        print(mutableAccessNativeTracking) // 56.7008 when no mutableAccess tracking
+        let (_, mutableAccessNativeTrackingH) = performMeasuredAction(count: outer) {
+          for _ in 1...inner {
+            obj1.withLockMutableAccessNativeH {
+              $0.stateEntity.number += 1
+            } whenMutablyAccessedDo: { _ in
+            }
+          }
+        }
+
+        print(mutableAccessNative, mutableAccessNativeTracking, mutableAccessNativeTrackingH) // 56.7008 when no mutableAccess tracking
       }
-      
+
       print("___", inoutAccess, pointerAccess, mutableAccessTracking)
     }
   }
@@ -113,7 +131,7 @@ struct RecursiveLockTests {
       print("___", access1, access3)
     }
   }
-  
+
   @available(anyAppleOS 26.0, *)
   final class RecursiveLock2Wrapper: Sendable {
     // static made for rejecting class stack allocation and allocate it in heap
@@ -140,16 +158,32 @@ struct RecursiveLockTests {
       throws(E) -> sending R {
       try lock.withLockMutableAccess(access, whenMutablyAccessedDo: whenMutablyAccessedDo)
     }
-    
+
+    @inlinable @inline(always)
     @available(macOS 9999, *)
-    func withLockMutableAccessNative<R, E: Error>(_ access: (inout GenericStateAccessHandle2<DataState_SendableExample>) throws(E) -> sending R,
-                                            whenMutablyAccessedDo: (borrowing DataState_SendableExample) -> Void)
+    final func withLockMutableAccessNative<R, E: Error>(_ access: (inout GenericStateAccessHandle2<DataState_SendableExample>) throws(E) -> sending R,
+                                                        whenMutablyAccessedDo: (borrowing DataState_SendableExample) -> Void)
       throws(E) -> sending R {
       try lock.withLockMutableAccessNative(access, whenMutablyAccessedDo: whenMutablyAccessedDo)
+    }
+    
+    @inlinable @inline(always)
+    @available(macOS 9999, *)
+    final func withLockMutableAccessNativeH<R, E: Error>(_ access: (inout GenericStateAccessHandle2<DataState_SendableExample>) throws(E) -> sending R,
+                                                        whenMutablyAccessedDo: (borrowing GenericStateAccessHandle2<DataState_SendableExample>) -> Void)
+      throws(E) -> sending R {
+      try lock.withLockMutableAccessNativeH(access, whenMutablyAccessedDo: whenMutablyAccessedDo)
+    }
+
+    @inlinable @inline(always)
+    @available(macOS 9999, *)
+    final func withLockMutableAccessNative<R, E: Error>(_ access: (inout GenericStateAccessHandle2<DataState_SendableExample>) throws(E) -> sending R)
+      throws(E) -> sending R {
+      try lock.withLockMutableAccessNative(access)
     }
   }
 }
 
-//extension RecursiveLockTests {
+// extension RecursiveLockTests {
 //
-//}
+// }

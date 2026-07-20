@@ -159,6 +159,7 @@ extension RecursiveLock2 where Value: Sendable & Copyable {
     return result
   }
   
+  @inlinable @inline(always)
   @available(macOS 9999, *)
   public final func withLockMutableAccessNative<R, E: Error>(_ access: (inout GenericStateAccessHandle2<Value>) throws(E) -> sending R,
                                                          whenMutablyAccessedDo: (borrowing Value) -> Void)
@@ -167,10 +168,44 @@ extension RecursiveLock2 where Value: Sendable & Copyable {
 
     var accessHandle = GenericStateAccessHandle2(mutableRef: MutableRef(&_value))
     let result = try access(&accessHandle)
-
-    if accessHandle.isMutablyAccessed { // 56ms without this branch | 202ms with it
+    
+    // without inlining accessHandle.isMutablyAccessed branch make func 3.5x slower
+//    if _fastPath(accessHandle._isMutablyAccessed) { // 56ms without this branch | 202ms with it
       whenMutablyAccessedDo(_value)
-    }
+//    }
+
+    return result
+  }
+  
+  @inlinable @inline(always)
+  @available(macOS 9999, *)
+  public final func withLockMutableAccessNativeH<R, E: Error>(_ access: (inout GenericStateAccessHandle2<Value>) throws(E) -> sending R,
+                                                         whenMutablyAccessedDo: (borrowing GenericStateAccessHandle2<Value>) -> Void)
+    throws(E) -> sending R {
+    _lock.lock(); defer { _lock.unlock() }
+
+    var accessHandle = GenericStateAccessHandle2(mutableRef: MutableRef(&_value))
+    let result = try access(&accessHandle)
+    
+    // without inlining accessHandle.isMutablyAccessed branch make func 3.5x slower
+//    if _fastPath(accessHandle._isMutablyAccessed) { // 56ms without this branch | 202ms with it
+//      whenMutablyAccessedDo(_value)
+//    }
+      if accessHandle._isMutablyAccessed {
+        whenMutablyAccessedDo(accessHandle)
+      }
+      
+    return result
+  }
+  
+  @inlinable @inline(always)
+  @available(macOS 9999, *)
+  public final func withLockMutableAccessNative<R, E: Error>(_ access: (inout GenericStateAccessHandle2<Value>) throws(E) -> sending R)
+    throws(E) -> sending R {
+    _lock.lock(); defer { _lock.unlock() }
+
+    var accessHandle = GenericStateAccessHandle2(mutableRef: MutableRef(&_value))
+    let result = try access(&accessHandle)
 
     return result
   }
