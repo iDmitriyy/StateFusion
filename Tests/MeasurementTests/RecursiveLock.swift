@@ -113,9 +113,10 @@ struct RecursiveLockTests {
       print("___", access1, access3)
     }
   }
-
+  
   @available(anyAppleOS 26.0, *)
   final class RecursiveLock2Wrapper: Sendable {
+    // static made for rejecting class stack allocation and allocate it in heap
     static let shared = RecursiveLock2Wrapper()
 
     let lock = RecursiveLock2(DataState_SendableExample())
@@ -148,3 +149,7 @@ struct RecursiveLockTests {
     }
   }
 }
+
+//extension RecursiveLockTests {
+//
+//}

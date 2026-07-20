@@ -168,7 +168,7 @@ extension RecursiveLock2 where Value: Sendable & Copyable {
     var accessHandle = GenericStateAccessHandle2(mutableRef: MutableRef(&_value))
     let result = try access(&accessHandle)
 
-    if accessHandle.isMutablyAccessed {
+    if accessHandle.isMutablyAccessed { // 56ms without this branch | 202ms with it
       whenMutablyAccessedDo(_value)
     }
 

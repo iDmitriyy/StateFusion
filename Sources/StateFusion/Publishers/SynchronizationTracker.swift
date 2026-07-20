@@ -5,6 +5,8 @@
 //  Created by Dmitriy Ignatyev on 17.06.2026.
 //
 
+import Foundation
+
 extension NSRecursiveLock {
   @inline(always)
   final func performLocked<T>(_ action: () -> T) -> T {
@@ -14,8 +16,6 @@ extension NSRecursiveLock {
 }
 
 #if DEBUG
-  import Foundation
-
   final class SynchronizationTracker {
     // https://github.com/ReactiveX/RxSwift/blob/132aea4f236ccadc51590b38af0357a331d51fa2/RxSwift/Rx.swift#L71
     
