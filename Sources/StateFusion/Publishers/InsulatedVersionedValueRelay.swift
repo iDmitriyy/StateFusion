@@ -78,10 +78,17 @@ extension InsulatedVersionedValueRelay {
 fileprivate struct ValueRelayAdapter<Output>: Publisher {
   typealias Failure = Never
 
-  internal let _subscribeClosure: (any Subscriber<Output, Never>) -> Void
+  // SubscribeClosure
+  internal let _subscribeClosure: (any Subscriber<Output, Failure>) -> Void
 
   func receive<S: Subscriber>(subscriber: S) where S.Input == Output, S.Failure == Failure {
     _subscribeClosure(subscriber)
+  }
+}
+
+struct SubscribeClosure<Output, Failure: Error> { // FIXME: - TBD
+  func callAsFunction(_ subscriber: some Subscriber<Output, Failure>) {
+    _ = subscriber
   }
 }
 

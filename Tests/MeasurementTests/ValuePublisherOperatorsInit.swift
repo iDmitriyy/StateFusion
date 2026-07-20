@@ -10,7 +10,7 @@ import StateFusion
 import Testing
 
 struct ValuePublisherOperatorsInit {
-  let outer: Int = 100
+  let outer: Int = 150
   let inner: Int = 1000
 
   /// Measures the performance overhead of creating a chain of Combine operators (e.g. .map)
@@ -19,6 +19,7 @@ struct ValuePublisherOperatorsInit {
   /// allocation and CPU time during type initialization.
   @Test func chainCreation() {
     let currentValueSubject = CurrentValueSubject<String, Never>("")
+    let currentValuePublisher = CurrentValuePublisher(currentValueSubject) // Library actual implementation
     let currentValuePublisherA = CurrentValuePublisher1(currentValueSubject)
     let currentValuePublisherB = CurrentValuePublisher2(currentValueSubject)
     let currentValuePublisherC = CurrentValuePublisher3(currentValueSubject)
@@ -32,6 +33,12 @@ struct ValuePublisherOperatorsInit {
     let (_, builtinSubjectErased) = performMeasuredAction(count: outer) {  // reference measurement
       for _ in 1...inner {
         blackHole(currentValueSubject.map { $0 }.map { $0 }.map { $0 }.map { $0 }.map { "\($0)" }.eraseToAnyPublisher())
+      }
+    }
+    
+    let (_, valuePublisher) = performMeasuredAction(count: outer) {
+      for _ in 1...inner {
+        blackHole(currentValuePublisher.map { $0 }.map { $0 }.map { $0 }.map { $0 }.map { "\($0)" })
       }
     }
 
@@ -66,7 +73,7 @@ struct ValuePublisherOperatorsInit {
       }
     }
 
-    print("___", builtinSubject, builtinSubjectErased, valuePublisherA, valuePublisherB_1, valuePublisherB_2, valuePublisherC_1, valuePublisherC_2)
+    print("___", builtinSubject, builtinSubjectErased, valuePublisher, valuePublisherA, valuePublisherB_1, valuePublisherB_2, valuePublisherC_1, valuePublisherC_2)
   }
 }
 

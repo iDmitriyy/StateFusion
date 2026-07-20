@@ -46,3 +46,41 @@ public struct GenericStateAccessHandle<StateEntity: ~Copyable>: ~Copyable, ~Esca
 
 @available(*, unavailable, message: "AccessHandle is restricted to local use within a `access` closure; it cannot be Sendable and must not cross isolation boundaries.")
 extension GenericStateAccessHandle: Sendable {}
+
+
+@available(macOS 9999, *)
+public struct GenericStateAccessHandle2<StateEntity: ~Copyable>: ~Copyable, ~Escapable {
+  public var stateEntity: StateEntity {
+    borrow {
+      _mutableRef.value
+    }
+    mutate {
+//      _isMutablyAccessed = true
+      return &_mutableRef.value
+    }
+  }
+
+//  @usableFromInline
+  
+  internal var isMutablyAccessed: Bool {
+    @inlinable @inline(always)
+    consuming get { true }
+//    consuming get { _isMutablyAccessed }
+  }
+
+//  private var _isMutablyAccessed: Bool = false
+
+  /// private
+  @usableFromInline
+  /* private */ internal var _mutableRef: MutableRef<StateEntity>
+
+  @_alwaysEmitIntoClient
+  @_lifetime(copy mutableRef)
+  @_transparent
+  internal init(mutableRef: consuming MutableRef<StateEntity>) {
+    _mutableRef = mutableRef
+  }
+}
+
+@available(*, unavailable, message: "AccessHandle is restricted to local use within a `access` closure; it cannot be Sendable and must not cross isolation boundaries.")
+extension GenericStateAccessHandle2: Sendable {}

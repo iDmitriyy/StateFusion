@@ -5,7 +5,7 @@
 //  Created by Dmitriy Ignatyev on 15.06.2026.
 //
 
-import class Foundation.NSRecursiveLock
+public import class Foundation.NSRecursiveLock
 import Synchronization
 
 // MARK: - RecursiveLock
@@ -18,11 +18,11 @@ public struct RecursiveLock<Value: ~Copyable>: ~Copyable {
 
   /// https://github.com/swiftlang/swift/blob/8454a3169ec99e23ae0974399f08afc4d43aa040/stdlib/public/Synchronization/Cell.swift#L18
   private let value: _Cell<Value>
-  
+
   public init(_ initialValue: consuming sending Value) {
     value = _Cell(initialValue)
   }
-  
+
   /// Initialize an RecursiveLock with a non-sendable lock-protected
   /// `initialState`.
   ///
@@ -36,7 +36,6 @@ public struct RecursiveLock<Value: ~Copyable>: ~Copyable {
   public init(uncheckedState initialValue: consuming Value) {
     value = _Cell(initialValue)
   }
-  
 } // reference:  https://github.com/swiftlang/swift/blob/e1c9eef30ca2e17163c8e8559befeb4dbca0e09a/stdlib/public/Synchronization/Mutex/Mutex.swift#L37
 
 extension RecursiveLock: @unchecked Sendable where Value: ~Copyable {}
@@ -49,7 +48,7 @@ extension RecursiveLock where Value: ~Copyable {
 
     return try unsafe body(&value._address.pointee)
   }
-  
+
   ///  Perform a closure while holding this lock.
   ///  This method does not enforce sendability requirement
   ///  on closure body and its return type.
@@ -66,7 +65,7 @@ extension RecursiveLock where Value: ~Copyable {
 
     return try unsafe body(&value._address.pointee)
   }
-  
+
 //  internal borrowing func withLock2<Result: ~Copyable, E: Error>(
 //    _ body: (inout _MutableRef<Value>) throws(E) -> sending Result,
 //  ) throws(E) -> sending Result {
@@ -75,7 +74,7 @@ extension RecursiveLock where Value: ~Copyable {
 //    var ref = _MutableRef(&value._address.pointee)
 //    return try body(&ref)
 //  }
-  
+
   public borrowing func withLock3<Result: ~Copyable, E: Error>(
     _ body: (UnsafeMutablePointer<Value>) throws(E) -> sending Result,
   ) throws(E) -> sending Result {
@@ -84,34 +83,39 @@ extension RecursiveLock where Value: ~Copyable {
   }
 }
 
-internal final class RecursiveLock2<Value: ~Copyable>: @unchecked Sendable {
-  private let _lock = NSRecursiveLock()
-  
-  private var value: Value
-  
+// MARK: - RecursiveLock 2
+
+public final class RecursiveLock2<Value: ~Copyable>: @unchecked Sendable {
+  @usableFromInline
+  internal let _lock = NSRecursiveLock()
+
+  @usableFromInline
+  internal var _value: Value
+
   public init(_ initialValue: consuming sending Value) {
-    value = initialValue
+    _value = initialValue
   }
-  
-  public borrowing func withLockInout<Result: ~Copyable, E: Error>(
+
+  public func withLockInout<Result: ~Copyable, E: Error>(
     _ body: (inout sending Value) throws(E) -> sending Result,
   ) throws(E) -> sending Result {
     _lock.lock(); defer { _lock.unlock() }
 
-    return try body(&value)
+    return try body(&_value)
   }
-  
-  public borrowing func withLockPointer<Result: ~Copyable, E: Error>(
+
+  public func withLockPointer<Result: ~Copyable, E: Error>(
     _ body: (UnsafeMutablePointer<Value>) throws(E) -> Result,
   ) throws(E) -> Result {
     _lock.lock(); defer { _lock.unlock() }
 
-    let result = try withUnsafeMutablePointer(to: &value) { (pointer) throws(E) -> Result in
+    return try withUnsafeMutablePointer(to: &_value) { pointer throws(E) -> Result in
       try body(pointer)
     }
-    return result
   }
-  
+
+  // withLockEmittingOnMutableAccess
+
 //  public borrowing func withLockMutRef<Result: ~Copyable, E: Error>(
 //    _ body: (borrowing _MutableRef<Value>) throws(E) -> sending Result,
 //  ) throws(E) -> sending Result {
@@ -119,10 +123,10 @@ internal final class RecursiveLock2<Value: ~Copyable>: @unchecked Sendable {
 //
 //    var ref = _MutableRef(&value)
 //    let result = try body(ref)
-//    
+//
 //    return result
 //  }
-//  
+//
 //  @available(macOS 9999, *)
 //  public borrowing func withLockNativeMutRef<Result: ~Copyable, E: Error>(
 //    _ body: (inout MutableRef<Value>) throws(E) -> sending Result,
@@ -131,7 +135,43 @@ internal final class RecursiveLock2<Value: ~Copyable>: @unchecked Sendable {
 //
 //    var ref = MutableRef(&value)
 //    let result = try body(&ref)
-//    
+//
 //    return result
 //  }
+}
+
+extension RecursiveLock2 where Value: Sendable & Copyable {
+//  @inlinable
+//  @inline(always)
+  public final func withLockMutableAccess<R, E: Error>(_ access: (inout GenericStateAccessHandle<Value>) throws(E) -> sending R,
+                                                         whenMutablyAccessedDo: (borrowing Value) -> Void)
+    throws(E) -> sending R {
+    _lock.lock(); defer { _lock.unlock() }
+
+    var accessHandle = GenericStateAccessHandle(mutableRef: _MutableRef(&_value))
+    let result = try access(&accessHandle)
+    let isMutablyAccessed = accessHandle.isMutablyAccessed
+
+    if isMutablyAccessed {
+      whenMutablyAccessedDo(_value)
+    }
+
+    return result
+  }
+  
+  @available(macOS 9999, *)
+  public final func withLockMutableAccessNative<R, E: Error>(_ access: (inout GenericStateAccessHandle2<Value>) throws(E) -> sending R,
+                                                         whenMutablyAccessedDo: (borrowing Value) -> Void)
+    throws(E) -> sending R {
+    _lock.lock(); defer { _lock.unlock() }
+
+    var accessHandle = GenericStateAccessHandle2(mutableRef: MutableRef(&_value))
+    let result = try access(&accessHandle)
+
+    if accessHandle.isMutablyAccessed {
+      whenMutablyAccessedDo(_value)
+    }
+
+    return result
+  }
 }
