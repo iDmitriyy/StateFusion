@@ -37,7 +37,7 @@ struct RecursiveLockTests {
           obj1.withLockMutableAccess {
             blackHole($0.stateEntity)
           } whenMutablyAccessedDo: { dataState in
-            blackHole(dataState)
+//            blackHole(dataState)
           }
         }
       }
@@ -151,10 +151,9 @@ struct RecursiveLockTests {
       try lock.withLockPointer(body)
     }
 
-//    @inlinable
-//    @inline(always)
+    @inlinable @inline(always)
     func withLockMutableAccess<R, E: Error>(_ access: (inout GenericStateAccessHandle<DataState_SendableExample>) throws(E) -> sending R,
-                                            whenMutablyAccessedDo: (borrowing DataState_SendableExample) -> Void)
+                                            whenMutablyAccessedDo: (borrowing GenericStateAccessHandle<DataState_SendableExample>) -> Void)
       throws(E) -> sending R {
       try lock.withLockMutableAccess(access, whenMutablyAccessedDo: whenMutablyAccessedDo)
     }

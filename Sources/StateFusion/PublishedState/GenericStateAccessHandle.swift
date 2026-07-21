@@ -30,7 +30,7 @@ public struct GenericStateAccessHandle<StateEntity: ~Copyable>: ~Copyable, ~Esca
     consuming get { _isMutablyAccessed }
   }
 
-  private var _isMutablyAccessed: Bool = false
+  public var _isMutablyAccessed: Bool = false
 
   /// private
   @usableFromInline

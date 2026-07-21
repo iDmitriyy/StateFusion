@@ -7,12 +7,8 @@
 
 import Builtin
 
-#if compiler(>=6.4)
-@available(anyAppleOS 9999, *)
-    internal var _mutableRef: MutableRef<StateEntity>
-    #else
-    internal var _mutableRef: _MutableRef<StateEntity>
-#endif
+//#if compiler(>=6.4)
+//#endif
 
 /// https://github.com/swiftlang/swift/blob/72a2eabe09c60f28fae0e45104aa7ac37a6e3677/stdlib/public/core/MutableRef.swift
 @frozen

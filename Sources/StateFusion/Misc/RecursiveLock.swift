@@ -144,16 +144,16 @@ extension RecursiveLock2 where Value: Sendable & Copyable {
 //  @inlinable
 //  @inline(always)
   public final func withLockMutableAccess<R, E: Error>(_ access: (inout GenericStateAccessHandle<Value>) throws(E) -> sending R,
-                                                         whenMutablyAccessedDo: (borrowing Value) -> Void)
+                                                         whenMutablyAccessedDo: (borrowing GenericStateAccessHandle<Value>) -> Void)
     throws(E) -> sending R {
     _lock.lock(); defer { _lock.unlock() }
 
     var accessHandle = GenericStateAccessHandle(mutableRef: _MutableRef(&_value))
     let result = try access(&accessHandle)
-    let isMutablyAccessed = accessHandle.isMutablyAccessed
+    let isMutablyAccessed = accessHandle._isMutablyAccessed
 
     if isMutablyAccessed {
-      whenMutablyAccessedDo(_value)
+      whenMutablyAccessedDo(accessHandle)
     }
 
     return result
