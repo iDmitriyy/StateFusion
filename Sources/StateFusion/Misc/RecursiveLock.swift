@@ -177,7 +177,7 @@ extension RecursiveLock2 where Value: Sendable & Copyable {
     return result
   }
   
-  @inlinable @inline(always)
+//  @inlinable @inline(always)
   @available(macOS 9999, *)
   public final func withLockMutableAccessNativeH<R, E: Error>(_ access: (inout GenericStateAccessHandle2<Value>) throws(E) -> sending R,
                                                          whenMutablyAccessedDo: (borrowing GenericStateAccessHandle2<Value>) -> Void)

@@ -65,8 +65,8 @@ public struct GenericStateAccessHandle2<StateEntity: ~Copyable>: ~Copyable, ~Esc
 
 //  @usableFromInline
 //   @inlinable @inline(always)
-//  internal var isMutablyAccessed: Bool {
-//     @inlinable @inline(always)
+//  public var isMutablyAccessed: Bool {
+////     @inlinable @inline(always)
 //    consuming get { _isMutablyAccessed }
 //  }
 
