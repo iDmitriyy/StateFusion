@@ -184,6 +184,3 @@ struct RecursiveLockTests {
   }
 }
 
-// extension RecursiveLockTests {
-//
-// }
