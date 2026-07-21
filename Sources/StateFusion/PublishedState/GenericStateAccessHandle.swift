@@ -48,7 +48,7 @@ public struct GenericStateAccessHandle<StateEntity: ~Copyable>: ~Copyable, ~Esca
 extension GenericStateAccessHandle: Sendable {}
 
 
-@available(macOS 9999, *)
+@available(anyAppleOS 9999, *)
 public struct GenericStateAccessHandle2<StateEntity: ~Copyable>: ~Copyable, ~Escapable {
   @inlinable @inline(always)
   public var stateEntity: StateEntity {
@@ -75,12 +75,12 @@ public struct GenericStateAccessHandle2<StateEntity: ~Copyable>: ~Copyable, ~Esc
 
   /// private
   @usableFromInline
-  /* private */ internal var _mutableRef: MutableRef<StateEntity>
+  /* private */ internal var _mutableRef: _MutableRef<StateEntity>
 
   @_alwaysEmitIntoClient
   @_lifetime(copy mutableRef)
   @_transparent
-  internal init(mutableRef: consuming MutableRef<StateEntity>) {
+  internal init(mutableRef: consuming _MutableRef<StateEntity>) {
     _mutableRef = mutableRef
   }
 }

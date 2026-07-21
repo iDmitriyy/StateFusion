@@ -166,7 +166,7 @@ extension RecursiveLock2 where Value: Sendable & Copyable {
     throws(E) -> sending R {
     _lock.lock(); defer { _lock.unlock() }
 
-    var accessHandle = GenericStateAccessHandle2(mutableRef: MutableRef(&_value))
+    var accessHandle = GenericStateAccessHandle2(mutableRef: _MutableRef(&_value))
     let result = try access(&accessHandle)
     
     // without inlining accessHandle.isMutablyAccessed branch make func 3.5x slower
@@ -184,7 +184,7 @@ extension RecursiveLock2 where Value: Sendable & Copyable {
     throws(E) -> sending R {
     _lock.lock(); defer { _lock.unlock() }
 
-    var accessHandle = GenericStateAccessHandle2(mutableRef: MutableRef(&_value))
+    var accessHandle = GenericStateAccessHandle2(mutableRef: _MutableRef(&_value))
     let result = try access(&accessHandle)
     
     // without inlining accessHandle.isMutablyAccessed branch make func 3.5x slower
@@ -204,7 +204,7 @@ extension RecursiveLock2 where Value: Sendable & Copyable {
     throws(E) -> sending R {
     _lock.lock(); defer { _lock.unlock() }
 
-    var accessHandle = GenericStateAccessHandle2(mutableRef: MutableRef(&_value))
+    var accessHandle = GenericStateAccessHandle2(mutableRef: _MutableRef(&_value))
     let result = try access(&accessHandle)
 
     return result
