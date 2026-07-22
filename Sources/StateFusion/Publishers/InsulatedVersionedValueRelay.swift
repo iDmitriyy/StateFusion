@@ -11,7 +11,39 @@ import Synchronization
 
 // MARK: - As Publisher (read-only interface)
 
+/// A thread-safe relay that holds a versioned value and publishes updates to subscribers.
+///
+/// `InsulatedVersionedValueRelay` provides a thread-safe container for a single value
+/// that can be observed by multiple subscribers. Each mutation increments a version number,
+/// allowing subscribers to detect and skip missed updates.
+///
+/// The relay maintains internal synchronization using a `RecursiveLock`, ensuring that
+/// concurrent reads and writes are safe. Subscribers receive values in the order they
+/// were published, and each value is paired with a monotonically increasing version number
+/// to enable gap detection.
+///
+/// ### Usage
+///
+/// ```swift
+/// let relay = InsulatedVersionedValueRelay(42)
+///
+/// // Subscribe to value changes
+/// relay.asValuePublisher()
+///   .sink { value in
+///     print("Received: \(value)")
+///   }
+///
+/// // Update the value
+/// relay.send(nextValue: 100)
+/// ```
 extension InsulatedVersionedValueRelay {
+  /// Creates a publisher that emits the current and future values.
+  ///
+  /// The returned publisher emits only the value component of each update,
+  /// discarding version information. This is useful when you only need
+  /// to observe value changes without version tracking.
+  ///
+  /// - Returns: A publisher that emits `Value` instances.
   internal final func asValuePublisher() -> InfallibleValuePublisher<Value> {
     let adapter = ValueRelayAdapter<Value>(_subscribeClosure: { [self] subscriber in
       receive(subscriberVariant: .value(subscriber))
@@ -23,6 +55,12 @@ extension InsulatedVersionedValueRelay {
                                     })
   }
 
+  /// Creates a publisher that emits the current and future values with version information.
+  ///
+  /// The returned publisher emits tuples containing both the value and its version number.
+  /// This is useful when you need to track the order of mutations or detect missed updates.
+  ///
+  /// - Returns: A publisher that emits `(value: Value, version: UInt32)` tuples.
   internal final func asVersionedValuePublisher() -> InfallibleValuePublisher<(value: Value, version: UInt32)> {
     let adapter = ValueRelayAdapter<(value: Value, version: UInt32)>(_subscribeClosure: { [self] subscriber in
       receive(subscriberVariant: .versionedValue(subscriber))
@@ -34,6 +72,14 @@ extension InsulatedVersionedValueRelay {
                                     })
   }
 
+  /// Creates a publisher that emits the current and future values as snapshots.
+  ///
+  /// The returned publisher emits `SequentialSnapshot` instances, which include
+  /// the value, version, and source identity. This is useful for establishing
+  /// synchronized connections where you need to capture the current state
+  /// and then receive only subsequent updates.
+  ///
+  /// - Returns: A publisher that emits `SequentialSnapshot<Value>` instances.
   internal final func asSnapshotPublisher() -> InfallibleValuePublisher<SequentialSnapshot<Value>> {
     let adapter = ValueRelayAdapter<SequentialSnapshot<Value>>(_subscribeClosure: { [self] subscriber in
       receive(subscriberVariant: .versionedValueSnapshot(subscriber))
@@ -49,6 +95,14 @@ extension InsulatedVersionedValueRelay {
 // MARK: - Take Updates
 
 extension InsulatedVersionedValueRelay {
+  /// Creates a publisher that emits values after the specified snapshot.
+  ///
+  /// Use this method to bridge the synchronization gap between reading the current
+  /// state and subscribing to future updates. If a mutation occurred between the
+  /// snapshot capture and subscription, the updated value is delivered immediately.
+  ///
+  /// - Parameter snapshot: The snapshot to use as a reference point.
+  /// - Returns: A publisher that emits values after the snapshot's version.
   internal final func takeUpdates(afterSnapshot snapshot: SequentialSnapshot<Value>) -> some InfalliblePublisher<Value> { // TODO: InfalliblePublisher
     ValueRelayAdapter(_subscribeClosure: { [self] subscriber in
       receive(subscriberVariant: .valueTakeUpdatesAfter(referenceVersion: snapshot._version,
@@ -57,6 +111,13 @@ extension InsulatedVersionedValueRelay {
     })
   }
 
+  /// Creates a publisher that drops values until the snapshot's version is exceeded.
+  ///
+  /// This is an older implementation that uses `drop(while:)` to filter values.
+  /// It logs a warning if the snapshot's source ID does not match this relay's ID.
+  ///
+  /// - Parameter snapshot: The snapshot to use as a reference point.
+  /// - Returns: A publisher that emits values after the snapshot's version.
   internal final func takeUpdates_old(afterSnapshot snapshot: SequentialSnapshot<Value>) -> some Publisher<Value, Never> {
     let predicate: (Output) -> Bool
     if snapshot._sourceID == id {
