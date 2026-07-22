@@ -11,10 +11,10 @@ import Builtin
 
 // https://github.com/swiftlang/swift/blob/a0b56234e1597d77b6d8a1154086590fad257196/stdlib/public/core/LifetimeManager.swift#L125
 
-// Improvement: MutableRef can be used when available:
-// https://github.com/swiftlang/swift/blob/72a2eabe09c60f28fae0e45104aa7ac37a6e3677/stdlib/public/core/MutableRef.swift#L17
-
 public struct GenericStateAccessHandle<StateEntity: ~Copyable>: ~Copyable, ~Escapable {
+//  @_alwaysEmitIntoClient
+//  @_transparent
+  @inlinable @inline(always)
   public var stateEntity: StateEntity {
     borrow {
       _mutableRef.value
@@ -30,7 +30,8 @@ public struct GenericStateAccessHandle<StateEntity: ~Copyable>: ~Copyable, ~Esca
     consuming get { _isMutablyAccessed }
   }
 
-  public var _isMutablyAccessed: Bool = false
+  @usableFromInline
+  internal var _isMutablyAccessed: Bool = false
 
   /// private
   @usableFromInline
@@ -47,43 +48,3 @@ public struct GenericStateAccessHandle<StateEntity: ~Copyable>: ~Copyable, ~Esca
 @available(*, unavailable, message: "AccessHandle is restricted to local use within a `access` closure; it cannot be Sendable and must not cross isolation boundaries.")
 extension GenericStateAccessHandle: Sendable {}
 
-
-@available(anyAppleOS 9999, *)
-public struct GenericStateAccessHandle2<StateEntity: ~Copyable>: ~Copyable, ~Escapable {
-  @inlinable @inline(always)
-  public var stateEntity: StateEntity {
-    @inlinable @inline(always)
-    borrow {
-      _mutableRef.value
-    }
-    @inlinable @inline(always)
-    mutate {
-      _isMutablyAccessed = true
-      return &_mutableRef.value
-    }
-  }
-
-//  @usableFromInline
-//   @inlinable @inline(always)
-//  public var isMutablyAccessed: Bool {
-////     @inlinable @inline(always)
-//    consuming get { _isMutablyAccessed }
-//  }
-
-//  @usableFromInline
-  public var _isMutablyAccessed: Bool = false
-
-  /// private
-  @usableFromInline
-  /* private */ internal var _mutableRef: _MutableRef<StateEntity>
-
-  @_alwaysEmitIntoClient
-  @_lifetime(copy mutableRef)
-  @_transparent
-  internal init(mutableRef: consuming _MutableRef<StateEntity>) {
-    _mutableRef = mutableRef
-  }
-}
-
-@available(*, unavailable, message: "AccessHandle is restricted to local use within a `access` closure; it cannot be Sendable and must not cross isolation boundaries.")
-extension GenericStateAccessHandle2: Sendable {}

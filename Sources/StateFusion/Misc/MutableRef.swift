@@ -7,6 +7,7 @@
 
 import Builtin
 
+/// Backport of MutableRef.
 /// https://github.com/swiftlang/swift/blob/72a2eabe09c60f28fae0e45104aa7ac37a6e3677/stdlib/public/core/MutableRef.swift
 @frozen @safe
 public struct _MutableRef<Value: ~Copyable>: ~Copyable, ~Escapable {
