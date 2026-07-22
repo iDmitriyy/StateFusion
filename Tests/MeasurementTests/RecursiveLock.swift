@@ -105,41 +105,41 @@ struct RecursiveLockTests {
     }
   }
   
-//  @available(anyAppleOS 26.0, *)
-//  final class Object_SwiftRef: Sendable {
-//    // static made for rejecting class stack allocation and allocate it in heap
-//    static let shared = Object_SwiftRef()
-//
-//    let lock = RecursiveLockClass(DataState_SendableExample())
-//
-//    func withLockInout<Result: ~Copyable, E: Error>(
-//      _ body: (inout sending DataState_SendableExample) throws(E) -> sending Result,
-//    ) throws(E) -> sending Result {
-//      try lock.withLockInout(body)
-//    }
-//
-//    func withLockPointer<Result: ~Copyable, E: Error>(
-//      _ body: (UnsafeMutablePointer<DataState_SendableExample>) throws(E) -> Result,
-//    ) throws(E) -> Result {
-//      try lock.withLockPointer(body)
-//    }
-//
-//    @inlinable @inline(always)
-//    @available(macOS 9999, *)
-//    final func withLockMutableAccess_borrowing<R, E: Error>(_ access: (inout SwiftMutRefAccessHandle<DataState_SendableExample>) throws(E) -> sending R,
-//                                                            whenMutablyAccessedDo: (borrowing DataState_SendableExample) -> Void)
-//      throws(E) -> sending R {
-//      try lock.withLockMutableAccess_borrowing(access, whenMutablyAccessedDo: whenMutablyAccessedDo)
-//    }
-//
-//    @inlinable @inline(always)
-//    @available(macOS 9999, *)
-//    final func withLockMutableAccess_handle<R, E: Error>(_ access: (inout SwiftMutRefAccessHandle<DataState_SendableExample>) throws(E) -> sending R,
-//                                                         whenMutablyAccessedDo: (borrowing SwiftMutRefAccessHandle<DataState_SendableExample>) -> Void)
-//      throws(E) -> sending R {
-//      try lock.withLockMutableAccess_handle(access, whenMutablyAccessedDo: whenMutablyAccessedDo)
-//    }
-//  }
+  @available(anyAppleOS 26.0, *)
+  final class Object_SwiftRef: Sendable {
+    // static made for rejecting class stack allocation and allocate it in heap
+    static let shared = Object_SwiftRef()
+
+    let lock = RecursiveLockClass(DataState_SendableExample())
+
+    func withLockInout<Result: ~Copyable, E: Error>(
+      _ body: (inout sending DataState_SendableExample) throws(E) -> sending Result,
+    ) throws(E) -> sending Result {
+      try lock.withLockInout(body)
+    }
+
+    func withLockPointer<Result: ~Copyable, E: Error>(
+      _ body: (UnsafeMutablePointer<DataState_SendableExample>) throws(E) -> Result,
+    ) throws(E) -> Result {
+      try lock.withLockPointer(body)
+    }
+
+    @inlinable @inline(always)
+    @available(macOS 9999, *)
+    final func withLockMutableAccess_borrowing<R, E: Error>(_ access: (inout SwiftMutRefAccessHandle<DataState_SendableExample>) throws(E) -> sending R,
+                                                            whenMutablyAccessedDo: (borrowing DataState_SendableExample) -> Void)
+      throws(E) -> sending R {
+      try lock.withLockMutableAccess_borrowing(access, whenMutablyAccessedDo: whenMutablyAccessedDo)
+    }
+
+    @inlinable @inline(always)
+    @available(macOS 9999, *)
+    final func withLockMutableAccess_handle<R, E: Error>(_ access: (inout SwiftMutRefAccessHandle<DataState_SendableExample>) throws(E) -> sending R,
+                                                         whenMutablyAccessedDo: (borrowing SwiftMutRefAccessHandle<DataState_SendableExample>) -> Void)
+      throws(E) -> sending R {
+      try lock.withLockMutableAccess_handle(access, whenMutablyAccessedDo: whenMutablyAccessedDo)
+    }
+  }
 }
 
 // MARK: - RecursiveLock 2
