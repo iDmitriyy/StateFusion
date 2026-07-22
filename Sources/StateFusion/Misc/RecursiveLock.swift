@@ -36,7 +36,7 @@ public struct RecursiveLock<Value: ~Copyable>: ~Copyable {
   public init(uncheckedState initialValue: consuming Value) {
     value = _Cell(initialValue)
   }
-} // reference:  https://github.com/swiftlang/swift/blob/e1c9eef30ca2e17163c8e8559befeb4dbca0e09a/stdlib/public/Synchronization/Mutex/Mutex.swift#L37
+} // reference:  https://github.com/swiftlang/swift/blob/e1c9eef30ca2e17163c8e8559befeb4dbca0e09a/stdlib/public/Synchronization/Mutex/Mutex.swift
 
 extension RecursiveLock: @unchecked Sendable where Value: ~Copyable {}
 

@@ -36,7 +36,7 @@ import Synchronization
 /// // Update the value
 /// relay.send(nextValue: 100)
 /// ```
-public final class InsulatedVersionedValueRelay<Value>: Publisher, Sendable {
+public final class InsulatedVersionedValueRelay<Value>: Publisher {
   public typealias Output = (value: Value, version: UInt32)
   public typealias Failure = Never
 
@@ -47,7 +47,7 @@ public final class InsulatedVersionedValueRelay<Value>: Publisher, Sendable {
     _properties = RecursiveLock(uncheckedState: (value: value, version: 0, subscriptions: ContiguousArray()))
   }
   
-  @_spi(Testing)
+  @_spi(PerformanceMeasuring)
   public init(_value: Value) {
     _properties = RecursiveLock(uncheckedState: (value: _value, version: 0, subscriptions: ContiguousArray()))
   }
@@ -100,6 +100,8 @@ public final class InsulatedVersionedValueRelay<Value>: Publisher, Sendable {
   }
 }
 
+extension InsulatedVersionedValueRelay: Sendable where Value: Sendable {}
+
 // MARK: - Sync Access
 
 extension InsulatedVersionedValueRelay { // where Value: ~Sendable
@@ -109,14 +111,16 @@ extension InsulatedVersionedValueRelay { // where Value: ~Sendable
     }
   }
 
-  internal func send(nextValue value: Value) {
+  public func send(nextValue value: Value) {
     _properties.withLock {
       $0.version += 1
       $0.value = value
-      // !!!
-      let snapshot = SequentialSnapshot(value: $0.value, version: $0.version, sourceID: id)
-      for subscription in $0.subscriptions {
-        subscription.receive(snapshot)
+      
+      if !$0.subscriptions.isEmpty {
+        let snapshot = SequentialSnapshot(value: $0.value, version: $0.version, sourceID: id)
+        for subscription in $0.subscriptions {
+          subscription.receive(snapshot)
+        }
       }
     }
   }
