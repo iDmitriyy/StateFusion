@@ -9,7 +9,7 @@ public import Combine
 import Foundation
 import Synchronization
 
-// MARK: - As Publisher (read-only interface)
+// MARK: - Insulated VersionedValue Relay
 
 /// A thread-safe relay that holds a versioned value and publishes updates to subscribers.
 ///
@@ -36,136 +36,20 @@ import Synchronization
 /// // Update the value
 /// relay.send(nextValue: 100)
 /// ```
-extension InsulatedVersionedValueRelay {
-  /// Creates a publisher that emits the current and future values.
-  ///
-  /// The returned publisher emits only the value component of each update,
-  /// discarding version information. This is useful when you only need
-  /// to observe value changes without version tracking.
-  ///
-  /// - Returns: A publisher that emits `Value` instances.
-  internal final func asValuePublisher() -> InfallibleValuePublisher<Value> {
-    let adapter = ValueRelayAdapter<Value>(_subscribeClosure: { [self] subscriber in
-      receive(subscriberVariant: .value(subscriber))
-    })
-
-    return InfallibleValuePublisher(retained_unverifiedValuePublisher: adapter,
-                                    getCurrentValue: { [unowned self] in
-                                      _properties.withLockUncheckedSending { $0.value }
-                                    })
-  }
-
-  /// Creates a publisher that emits the current and future values with version information.
-  ///
-  /// The returned publisher emits tuples containing both the value and its version number.
-  /// This is useful when you need to track the order of mutations or detect missed updates.
-  ///
-  /// - Returns: A publisher that emits `(value: Value, version: UInt32)` tuples.
-  internal final func asVersionedValuePublisher() -> InfallibleValuePublisher<(value: Value, version: UInt32)> {
-    let adapter = ValueRelayAdapter<(value: Value, version: UInt32)>(_subscribeClosure: { [self] subscriber in
-      receive(subscriberVariant: .versionedValue(subscriber))
-    })
-
-    return InfallibleValuePublisher(retained_unverifiedValuePublisher: adapter,
-                                    getCurrentValue: { [unowned self] in
-                                      _properties.withLockUncheckedSending { ($0.value, $0.version) }
-                                    })
-  }
-
-  /// Creates a publisher that emits the current and future values as snapshots.
-  ///
-  /// The returned publisher emits `SequentialSnapshot` instances, which include
-  /// the value, version, and source identity. This is useful for establishing
-  /// synchronized connections where you need to capture the current state
-  /// and then receive only subsequent updates.
-  ///
-  /// - Returns: A publisher that emits `SequentialSnapshot<Value>` instances.
-  internal final func asSnapshotPublisher() -> InfallibleValuePublisher<SequentialSnapshot<Value>> {
-    let adapter = ValueRelayAdapter<SequentialSnapshot<Value>>(_subscribeClosure: { [self] subscriber in
-      receive(subscriberVariant: .versionedValueSnapshot(subscriber))
-    })
-
-    return InfallibleValuePublisher(retained_unverifiedValuePublisher: adapter,
-                                    getCurrentValue: { [unowned self] in
-                                      uncheckedSendable_valueSnapshot
-                                    })
-  }
-}
-
-// MARK: - Take Updates
-
-extension InsulatedVersionedValueRelay {
-  /// Creates a publisher that emits values after the specified snapshot.
-  ///
-  /// Use this method to bridge the synchronization gap between reading the current
-  /// state and subscribing to future updates. If a mutation occurred between the
-  /// snapshot capture and subscription, the updated value is delivered immediately.
-  ///
-  /// - Parameter snapshot: The snapshot to use as a reference point.
-  /// - Returns: A publisher that emits values after the snapshot's version.
-  internal final func takeUpdates(afterSnapshot snapshot: SequentialSnapshot<Value>) -> some InfalliblePublisher<Value> { // TODO: InfalliblePublisher
-    ValueRelayAdapter(_subscribeClosure: { [self] subscriber in
-      receive(subscriberVariant: .valueTakeUpdatesAfter(referenceVersion: snapshot._version,
-                                                        sourceID: snapshot._sourceID,
-                                                        subscriber))
-    })
-  }
-
-  /// Creates a publisher that drops values until the snapshot's version is exceeded.
-  ///
-  /// This is an older implementation that uses `drop(while:)` to filter values.
-  /// It logs a warning if the snapshot's source ID does not match this relay's ID.
-  ///
-  /// - Parameter snapshot: The snapshot to use as a reference point.
-  /// - Returns: A publisher that emits values after the snapshot's version.
-  internal final func takeUpdates_old(afterSnapshot snapshot: SequentialSnapshot<Value>) -> some Publisher<Value, Never> {
-    let predicate: (Output) -> Bool
-    if snapshot._sourceID == id {
-      predicate = { [referenceVersion = snapshot._version] in
-        $0.version <= referenceVersion
-      }
-    } else {
-      predicate = { _ in
-        false
-      }
-      log(.warning, StateFusionLogEntry(code: .snapshotSourceMismatch, message: "Snapshot sourceID mismatch"))
-    }
-
-    return drop(while: predicate).map { $0.value }
-    // FIXME: + share
-  }
-}
-
-fileprivate struct ValueRelayAdapter<Output>: Publisher {
-  typealias Failure = Never
-
-  // TODO: use SubscribeClosure struct to pass subscriber as generic params and eliminate existential unboxing
-  let _subscribeClosure: (any Subscriber<Output, Failure>) -> Void
-
-  func receive<S: Subscriber>(subscriber: S) where S.Input == Output, S.Failure == Failure {
-    _subscribeClosure(subscriber)
-  }
-}
-
-fileprivate struct SubscribeClosure<Output, Failure: Error> { // FIXME: - TBD
-  func callAsFunction(_ subscriber: some Subscriber<Output, Failure>) {
-    _ = subscriber
-  }
-}
-
-//===-------------------------------------------------------------------------------------------------------------------===//
-
-// MARK: - Insulated VersionedValue Relay
-
-internal final class InsulatedVersionedValueRelay<Value>: Publisher, Sendable {
-  typealias Output = (value: Value, version: UInt32)
-  typealias Failure = Never
+public final class InsulatedVersionedValueRelay<Value>: Publisher, Sendable {
+  public typealias Output = (value: Value, version: UInt32)
+  public typealias Failure = Never
 
   private let _properties: RecursiveLock<(value: Value, version: UInt32, subscriptions: ContiguousArray<SubscriptionImp>)>
-  private let id: SourceID = SourceID()
+  internal let id: SourceID = SourceID()
 
-  init(_ value: Value) {
+  internal init(_ value: Value) {
     _properties = RecursiveLock(uncheckedState: (value: value, version: 0, subscriptions: ContiguousArray()))
+  }
+  
+  @_spi(Testing)
+  public init(_value: Value) {
+    _properties = RecursiveLock(uncheckedState: (value: _value, version: 0, subscriptions: ContiguousArray()))
   }
 
   deinit {
@@ -174,7 +58,7 @@ internal final class InsulatedVersionedValueRelay<Value>: Publisher, Sendable {
 
   // MARK: - Publisher Protocol Imp
 
-  func receive(subscriber: some Subscriber<Output, Never>) {
+  public func receive(subscriber: some Subscriber<Output, Never>) {
     let subscription = SubscriptionImp(upstream: self, downstream: .versionedValue(subscriber))
     _properties.withLock {
       $0.subscriptions.append(subscription)
@@ -182,7 +66,7 @@ internal final class InsulatedVersionedValueRelay<Value>: Publisher, Sendable {
     subscriber.receive(subscription: subscription)
   }
 
-  private func receive(subscriberVariant: SubscriberVariant) {
+  internal func receive(subscriberVariant: SubscriberVariant) {
     let subscription = SubscriptionImp(upstream: self, downstream: subscriberVariant)
     _properties.withLock {
       $0.subscriptions.append(subscription)
@@ -237,35 +121,39 @@ extension InsulatedVersionedValueRelay { // where Value: ~Sendable
     }
   }
 
-  internal final func withLockAlwaysEmittingMutableAccess<R>(_ access: (inout Value) -> sending R)
+  public final func withLockAlwaysEmittingMutableAccess<R>(_ access: (inout Value) -> sending R)
     -> sending R {
     _properties.withLock {
       $0.version += 1
       let result = access(&$0.value)
-      let snapshot = SequentialSnapshot(value: $0.value, version: $0.version, sourceID: id)
-      for subscription in $0.subscriptions {
-        subscription.receive(snapshot)
+      
+      if !$0.subscriptions.isEmpty {
+        let snapshot = SequentialSnapshot(value: $0.value, version: $0.version, sourceID: id)
+        for subscription in $0.subscriptions {
+          subscription.receive(snapshot)
+        }
       }
+      
       return result
     }
   }
 }
 
 extension InsulatedVersionedValueRelay where Value: Sendable {
-  final var valueSnapshot: SequentialSnapshot<Value> {
+  internal final var valueSnapshot: SequentialSnapshot<Value> {
     _properties.withLock {
       SequentialSnapshot(value: $0.value, version: $0.version, sourceID: id)
     }
   }
 
-  internal final func withLockEmittingOnMutableAccess<R: Sendable, E: Error>(
+  public final func withLockEmittingOnMutableAccess<R: Sendable, E: Error>(
     _ access: (inout GenericStateAccessHandle<Value>) throws(E) -> R,
   ) throws(E) -> R {
     try _properties.withLock { properties throws(E) -> R in
       var accessHandle = GenericStateAccessHandle(mutableRef: _MutableRef(&properties.value))
       let result = try access(&accessHandle)
 
-      if accessHandle._isMutablyAccessed {
+      if accessHandle._isMutablyAccessed, !properties.subscriptions.isEmpty {
         let snapshot = SequentialSnapshot(value: properties.value, version: properties.version, sourceID: id)
         for subscription in properties.subscriptions {
           subscription.receive(snapshot)
@@ -445,13 +333,13 @@ extension InsulatedVersionedValueRelay {
 }
 
 extension InsulatedVersionedValueRelay {
-  fileprivate enum SubscriberVariant {
+  internal enum SubscriberVariant {
     case value(any Subscriber<Value, Never>)
     case valueTakeUpdatesAfter(referenceVersion: UInt32, sourceID: SourceID, any Subscriber<Value, Never>)
     case versionedValue(any Subscriber<(value: Value, version: UInt32), Never>)
     case versionedValueSnapshot(any Subscriber<SequentialSnapshot<Value>, Never>)
 
-    func receive(_ new: SequentialSnapshot<Value>, upstreamID: SourceID) -> Subscribers.Demand {
+    fileprivate func receive(_ new: SequentialSnapshot<Value>, upstreamID: SourceID) -> Subscribers.Demand {
       switch self {
       case let .value(downstream):
         return downstream.receive(new.value)

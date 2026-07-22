@@ -203,7 +203,7 @@ struct AccessRecursiveLockTests {
     }
   }
 
-  // MARK: - MutableAccess : Write-Read
+  // MARK: - MutableAccess : Write - Read
 
   /// Measures combined read/write access performance across different lock implementations.
   /// Compares `inout`, `pointer`, and mutableAccess tracking access patterns.
