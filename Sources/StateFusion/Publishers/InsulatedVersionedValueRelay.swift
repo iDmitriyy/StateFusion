@@ -169,10 +169,19 @@ internal final class InsulatedVersionedValueRelay<Value>: Publisher, Sendable {
     }
   }
 
-  // internal final func withMutationTrackingAccess<R>(_ access: (inout Value) -> sending R)
-  // -> sending R {
-  //
-  // }
+//   internal final func withLockEmittingOnMutableAccess<R>(_ access: (inout Value) -> sending R)
+//   -> sending R {
+//  
+//   }
+  
+//  @inline(always)
+//  func withLockEmittingOnMutableAccess<R: Sendable, E: Error>(
+//    _ access: (inout GenericStateAccessHandle<Value>) throws(E) -> R,
+//    whenMutablyAccessedDo: (borrowing GenericStateAccessHandle<Value>) -> Void,
+//  )
+//    throws(E) -> R {
+//    try _dataState.withLockMutableAccess(access, whenMutablyAccessedDo: whenMutablyAccessedDo)
+//  }
 
   // MARK: - Private Imp
 

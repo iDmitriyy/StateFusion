@@ -19,7 +19,7 @@ import Testing
 /// The tests benchmark two lock implementations:
 /// - Current library `RecursiveLock` imp with `GenericStateAccessHandle` using backported `MutableRef` (BackportedRef_TestObject)
 /// - Custom `RecursiveLockClass` with `Swift.MutableRef` (SwiftRef_TestObject)
-struct RecursiveLockTests {
+struct AccessRecursiveLockTests {
   let outer: Int = 1000
   let inner: Int = 1000
 
@@ -314,7 +314,7 @@ struct RecursiveLockTests {
 
 /// Test object using `RecursiveLock` with `GenericStateAccessHandle` using backported `MutableRef` implementation.
 /// Measures performance of `inout` and `mutableAccess tracking` access patterns.
-extension RecursiveLockTests {
+extension AccessRecursiveLockTests {
   @available(anyAppleOS 26.0, *)
   final class BackportedRef_TestObject: Sendable {
     /// static made for rejecting class stack allocation and allocate it in heap
@@ -344,7 +344,7 @@ extension RecursiveLockTests {
 
 // MARK: - Swift:MutableRef Handle | +Pointer access
 
-extension RecursiveLockTests {
+extension AccessRecursiveLockTests {
   /// Test object using custom `RecursiveLockClass` with Swift MutableRef.
   /// Measures performance of `inout`, `pointer`, and mutableAccess tracking access patterns.
   @available(anyAppleOS 26.0, *)
@@ -392,7 +392,7 @@ extension RecursiveLockTests {
 
 // MARK: RecursiveLock 2
 
-extension RecursiveLockTests {
+extension AccessRecursiveLockTests {
   final class RecursiveLockClass<Value: ~Copyable>: @unchecked Sendable {
     @usableFromInline
     internal let _lock = NSRecursiveLock()
@@ -424,7 +424,7 @@ extension RecursiveLockTests {
   }
 }
 
-extension RecursiveLockTests.RecursiveLockClass where Value: Sendable {
+extension AccessRecursiveLockTests.RecursiveLockClass where Value: Sendable {
   @available(anyAppleOS 9999, *)
   func withLockMutableAccess_handle<R, E: Error>(_ access: (inout SwiftMutableRefAccessHandle<Value>) throws(E) -> R,
                                                  whenMutablyAccessedDo: (borrowing SwiftMutableRefAccessHandle<Value>) -> Void)
