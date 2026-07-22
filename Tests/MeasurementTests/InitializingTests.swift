@@ -22,4 +22,16 @@ struct InitializingTests {
     
     print("___", t)
   }
+  
+  @Test func `SequentialSnapshot Version`() {
+    let sourceID = SourceID()
+    let snapshot = SequentialSnapshot<Int>(_value: 0, _version: 0, _sourceID: sourceID)
+    let (_, t) = performMeasuredAction(count: outer) {
+      for _ in 0..<(inner * 10) {
+        blackHole(snapshot.version)
+      }
+    }
+    
+    print("___", t)
+  }
 }

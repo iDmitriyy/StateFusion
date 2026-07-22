@@ -62,11 +62,7 @@ public struct SequentialSnapshot<T> {
   /// ID/sourceIdentity to check that snapshot was consumed by the same Subject/Relay that produced it.
   internal let _sourceID: SourceID
 
-//  internal init(initial value: T) {
-//    self.value = value
-//    _version = 0
-//  }
-
+  @inline(always)
   internal init(value: T, version: UInt32, sourceID: SourceID) {
     self.value = value
     _version = version
