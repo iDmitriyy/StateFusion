@@ -14,7 +14,7 @@ struct ValuePublisherOperatorsInit {
   let inner: Int = 1000
 
   /// Measures the performance overhead of creating a chain of Combine operators (e.g. .map)
-  /// using three different architectural approaches for a CurrentValuePublisher.
+  /// using three different approaches for a CurrentValuePublisher.
   /// It specifically bench-marks how the internal storage mechanism of each wrapper affects memory
   /// allocation and CPU time during type initialization.
   @Test func chainCreation() {
@@ -24,56 +24,65 @@ struct ValuePublisherOperatorsInit {
     let currentValuePublisherB = CurrentValuePublisher2(currentValueSubject)
     let currentValuePublisherC = CurrentValuePublisher3(currentValueSubject)
 
-    let (_, builtinSubject) = performMeasuredAction(count: outer) {  // reference measurement
+    let (_, tCurrentValueSubject) = performMeasuredAction(count: outer) { // reference measurement
       for _ in 1...inner {
         blackHole(currentValueSubject.map { $0 }.map { $0 }.map { $0 }.map { $0 }.map { "\($0)" })
       }
     }
-    
-    let (_, builtinSubjectErased) = performMeasuredAction(count: outer) {  // reference measurement
+
+    let (_, tCurrentValueSubjectErased) = performMeasuredAction(count: outer) { // reference measurement
       for _ in 1...inner {
         blackHole(currentValueSubject.map { $0 }.map { $0 }.map { $0 }.map { $0 }.map { "\($0)" }.eraseToAnyPublisher())
       }
     }
-    
-    let (_, valuePublisher) = performMeasuredAction(count: outer) {
+
+    let (_, tValuePublisher) = performMeasuredAction(count: outer) {
       for _ in 1...inner {
         blackHole(currentValuePublisher.map { $0 }.map { $0 }.map { $0 }.map { $0 }.map { "\($0)" })
       }
     }
 
-    let (_, valuePublisherA) = performMeasuredAction(count: outer) {
+    let (_, tValuePublisherA) = performMeasuredAction(count: outer) {
       for _ in 1...inner {
         blackHole(currentValuePublisherA.map { $0 }.map { $0 }.map { $0 }.map { $0 }.map { "\($0)" })
       }
     }
     // FIXME: - write difference from map2
     // this variant eliminate nesting in chain "CurrentValuePublisher-Base1-CurrentValuePublisher-Base2..."
-    let (_, valuePublisherB_1) = performMeasuredAction(count: outer) {
+    let (_, tValuePublisherB_1) = performMeasuredAction(count: outer) {
       for _ in 1...inner {
         blackHole(currentValuePublisherB.map { $0 }.map { $0 }.map { $0 }.map { $0 }.map { "\($0)" })
       }
     }
-    
-    let (_, valuePublisherB_2) = performMeasuredAction(count: outer) {
+
+    let (_, tValuePublisherB_2) = performMeasuredAction(count: outer) {
       for _ in 1...inner {
         blackHole(currentValuePublisherB.map2 { $0 }.map2 { $0 }.map2 { $0 }.map2 { $0 }.map2 { "\($0)" })
       }
     }
 
-    let (_, valuePublisherC_1) = performMeasuredAction(count: outer) {
+    let (_, tValuePublisherC_1) = performMeasuredAction(count: outer) {
       for _ in 1...inner {
         blackHole(currentValuePublisherC.map { $0 }.map { $0 }.map { $0 }.map { $0 }.map { "\($0)" })
       }
     }
-    
-    let (_, valuePublisherC_2) = performMeasuredAction(count: outer) {
+
+    let (_, tValuePublisherC_2) = performMeasuredAction(count: outer) {
       for _ in 1...inner {
         blackHole(currentValuePublisherC.map2 { $0 }.map2 { $0 }.map2 { $0 }.map2 { $0 }.map2 { "\($0)" })
       }
     }
 
-    print("___", builtinSubject, builtinSubjectErased, valuePublisher, valuePublisherA, valuePublisherB_1, valuePublisherB_2, valuePublisherC_1, valuePublisherC_2)
+    printTable("OperatorsChain Init",
+               decimalDigits: 0,
+               rows: [("CurrentValueSubject", tCurrentValueSubject),
+                      ("CurrentValueSubjectErased", tCurrentValueSubjectErased),
+                      ("ValuePublisher", tValuePublisher),
+                      ("ValuePublisherA", tValuePublisherA),
+                      ("ValuePublisherB_1", tValuePublisherB_1),
+                      ("ValuePublisherB_2", tValuePublisherB_2),
+                      ("ValuePublisherC_1", tValuePublisherC_1),
+                      ("ValuePublisherC_2", tValuePublisherC_2)])
   }
 }
 
@@ -92,7 +101,7 @@ extension CurrentValuePublisher2 {
     }
     return wrap(unboxingAny: _base)
   }
-  
+
   public func map2<T>(_ transform: @escaping (Output) -> T) -> CurrentValuePublisher2<T, Failure> {
     let map = Publishers.Map(upstream: self, transform: transform)
     return CurrentValuePublisher2<T, Failure>(retained_unverifiedValuePublisher: map)
@@ -104,7 +113,7 @@ extension CurrentValuePublisher3 {
     let map = Publishers.Map(upstream: _base, transform: transform)
     return CurrentValuePublisher3<T, Failure>(retained_unverifiedValuePublisher: map)
   }
-  
+
   public func map2<T>(_ transform: @escaping (Output) -> T) -> CurrentValuePublisher3<T, Failure> {
     let map = Publishers.Map(upstream: self, transform: transform)
     return CurrentValuePublisher3<T, Failure>(retained_unverifiedValuePublisher: map)
@@ -128,7 +137,7 @@ struct CurrentValuePublisher1<Output, Failure: Error>: Publisher {
       base.receive(subscriber: subscriber)
     }
   }
-  
+
   @inlinable
   public func receive<S: Subscriber>(subscriber: S) where S.Input == Output, S.Failure == Failure {
     _subscribeClosure(subscriber)

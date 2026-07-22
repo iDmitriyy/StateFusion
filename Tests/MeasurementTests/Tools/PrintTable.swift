@@ -17,9 +17,9 @@ import Foundation
 /// pointerAccess  41.50
 ///```
 func printTable(_ title: String,
-                rows: [(name: String, value: Double)],
-                decimalPlaces: Int = 2) {
-  let formatted = rows.map { ($0.name, String(format: "%.*f", decimalPlaces, Double($0.value))) }
+                decimalDigits: UInt8 = 2,
+                rows: [(name: String, value: Double)]) {
+  let formatted = rows.map { ($0.name, String(format: "%.*f", decimalDigits, Double($0.value))) }
   let nameWidth = formatted.map(\.0.count).max() ?? 0
   let valueWidth = formatted.map(\.1.count).max() ?? 0
   let tableWidth = nameWidth + valueWidth + 4
