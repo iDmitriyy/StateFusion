@@ -36,7 +36,7 @@ import Synchronization
 /// relay.send(nextValue: 100)
 /// ```
 public final class InsulatedVersionedValueRelay<Value>: Publisher {
-  public typealias Output = (value: Value, version: UInt32)
+  public typealias Output = Value
   public typealias Failure = Never
 
   private let _properties: RecursiveLock<(value: Value, version: UInt32, subscriptions: ContiguousArray<SubscriptionImp>)>
@@ -58,7 +58,7 @@ public final class InsulatedVersionedValueRelay<Value>: Publisher {
   // MARK: - Publisher Protocol Imp
 
   public func receive(subscriber: some Subscriber<Output, Never>) {
-    let subscription = SubscriptionImp(upstream: self, downstream: .versionedValue(subscriber))
+    let subscription = SubscriptionImp(upstream: self, downstream: .value(subscriber))
     _properties.withLock {
       $0.subscriptions.append(subscription)
     }
@@ -195,7 +195,7 @@ extension InsulatedVersionedValueRelay {
       downstreamLock.deinitialize(count: 1)
       downstreamLock.deallocate()
     }
-
+    
     func receive(_ new: SequentialSnapshot<Value>) {
       lock.lock()
 

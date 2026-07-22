@@ -51,9 +51,7 @@ public struct SequentialSnapshot<T> {
 
   /// A monotonically increasing identifier for this snapshot version.
   @inlinable @inline(always)
-  public var version: some Comparable {
-    _version
-  }
+  public var version: some Comparable { _version }
 
   /// serial number
   @usableFromInline

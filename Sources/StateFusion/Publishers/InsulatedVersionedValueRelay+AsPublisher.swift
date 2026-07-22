@@ -91,22 +91,22 @@ extension InsulatedVersionedValueRelay {
   ///
   /// - Parameter snapshot: The snapshot to use as a reference point.
   /// - Returns: A publisher that emits values after the snapshot's version.
-  internal final func takeUpdates_old(afterSnapshot snapshot: SequentialSnapshot<Value>) -> some Publisher<Value, Never> {
-    let predicate: (Output) -> Bool
-    if snapshot._sourceID == id {
-      predicate = { [referenceVersion = snapshot._version] in
-        $0.version <= referenceVersion
-      }
-    } else {
-      predicate = { _ in
-        false
-      }
-      log(.warning, StateFusionLogEntry(code: .snapshotSourceMismatch, message: "Snapshot sourceID mismatch"))
-    }
-
-    return drop(while: predicate).map { $0.value }
-    // FIXME: + share
-  }
+//  internal final func takeUpdates_old(afterSnapshot snapshot: SequentialSnapshot<Value>) -> some Publisher<Value, Never> {
+//    let predicate: (Output) -> Bool
+//    if snapshot._sourceID == id {
+//      predicate = { [referenceVersion = snapshot._version] in
+//        $0.version <= referenceVersion
+//      }
+//    } else {
+//      predicate = { _ in
+//        false
+//      }
+//      log(.warning, StateFusionLogEntry(code: .snapshotSourceMismatch, message: "Snapshot sourceID mismatch"))
+//    }
+//
+//    return drop(while: predicate).map { $0.value }
+//    // FIXME: + share
+//  }
 }
 
 fileprivate struct ValueRelayAdapter<Output>: Publisher {

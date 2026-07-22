@@ -55,6 +55,9 @@ struct ThroughputTests: ~Copyable {
     let thCurrentValueSubject = totalIterations * (1000 / msCurrentValueSubject)
     let thVersionedValueRelay = totalIterations * (1000 / msVersionedValueRelay)
     
+    // CurrentValueSubject  9565905
+    // VersionedValueRelay  187149
+
     printTable("Elements Per Second With Subscriber",
                decimalDigits: 0,
                rows: [("CurrentValueSubject", thCurrentValueSubject),
