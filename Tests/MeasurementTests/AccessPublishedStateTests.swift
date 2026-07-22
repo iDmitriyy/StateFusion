@@ -13,14 +13,10 @@ struct AccessPublishedStateTests {
   let outer: Int = 1000
   let inner: Int = 1000
   
-  
-  // MARK: - MutableAccess : ReadOnly
-  
-  
   // MARK: - MutableAccess : Write - Read
 
   /// Measures combined read/write access performance across different lock implementations.
-  /// Compares `inout`, `pointer`, and mutableAccess tracking access patterns.
+  /// Compares `inout`, `pointer`, and `mutableAccess tracking` access patterns.
   @Test func `MutableAccess Write-Read`() {
     `MutableAccess ReadOnly`()
     `MutableAccess Write With No Subscriber`()
@@ -29,7 +25,6 @@ struct AccessPublishedStateTests {
 
   private func `MutableAccess ReadOnly`() {
     if #available(macOS 26.0, *) {
-      
       let source = InsulatedVersionedValueRelay(_value: DataState_SendableExample())
 
       let (_, inoutAccess) = performMeasuredAction(count: outer) {
