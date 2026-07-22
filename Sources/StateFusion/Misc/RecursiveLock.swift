@@ -68,9 +68,10 @@ extension RecursiveLock where Value: ~Copyable {
     return try unsafe body(&value._address.pointee)
   }
 
-  public func withLockMutableAccess<R: Sendable, E: Error>(_ access: (inout GenericStateAccessHandle<Value>) throws(E) -> R,
-                                                           whenMutablyAccessedDo: (borrowing GenericStateAccessHandle<Value>) -> Void)
-    throws(E) -> R {
+  public func withLockMutableAccess<R: Sendable, E: Error>(
+    _ access: (inout GenericStateAccessHandle<Value>) throws(E) -> R,
+    whenMutablyAccessedDo: (borrowing GenericStateAccessHandle<Value>) -> Void
+  ) throws(E) -> R {
     _lock.lock(); defer { _lock.unlock() }
 
     var stub: UInt = 0

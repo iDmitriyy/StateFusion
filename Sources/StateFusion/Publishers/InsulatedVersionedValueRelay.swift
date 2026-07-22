@@ -19,7 +19,7 @@ extension InsulatedVersionedValueRelay {
 
     return InfallibleValuePublisher(retained_unverifiedValuePublisher: adapter,
                                     getCurrentValue: { [unowned self] in
-                                      _dataState.withLockUncheckedSending { $0.value }
+                                      _properties.withLockUncheckedSending { $0.value }
                                     })
   }
 
@@ -30,7 +30,7 @@ extension InsulatedVersionedValueRelay {
 
     return InfallibleValuePublisher(retained_unverifiedValuePublisher: adapter,
                                     getCurrentValue: { [unowned self] in
-                                      _dataState.withLockUncheckedSending { ($0.value, $0.version) }
+                                      _properties.withLockUncheckedSending { ($0.value, $0.version) }
                                     })
   }
 
@@ -78,32 +78,33 @@ extension InsulatedVersionedValueRelay {
 fileprivate struct ValueRelayAdapter<Output>: Publisher {
   typealias Failure = Never
 
-  // SubscribeClosure
-  internal let _subscribeClosure: (any Subscriber<Output, Failure>) -> Void
+  // TODO: use SubscribeClosure struct to pass subscriber as generic params and eliminate existential unboxing
+  let _subscribeClosure: (any Subscriber<Output, Failure>) -> Void
 
   func receive<S: Subscriber>(subscriber: S) where S.Input == Output, S.Failure == Failure {
     _subscribeClosure(subscriber)
   }
 }
 
-struct SubscribeClosure<Output, Failure: Error> { // FIXME: - TBD
+fileprivate struct SubscribeClosure<Output, Failure: Error> { // FIXME: - TBD
   func callAsFunction(_ subscriber: some Subscriber<Output, Failure>) {
     _ = subscriber
   }
 }
 
 //===-------------------------------------------------------------------------------------------------------------------===//
+
 // MARK: - Insulated VersionedValue Relay
 
 internal final class InsulatedVersionedValueRelay<Value>: Publisher, Sendable {
   typealias Output = (value: Value, version: UInt32)
   typealias Failure = Never
 
-  private let _dataState: RecursiveLock<(value: Value, version: UInt32, subscriptions: ContiguousArray<SubscriptionImp>)>
+  private let _properties: RecursiveLock<(value: Value, version: UInt32, subscriptions: ContiguousArray<SubscriptionImp>)>
   private let id: SourceID = SourceID()
 
   init(_ value: Value) {
-    _dataState = RecursiveLock(uncheckedState: (value: value, version: 0, subscriptions: ContiguousArray()))
+    _properties = RecursiveLock(uncheckedState: (value: value, version: 0, subscriptions: ContiguousArray()))
   }
 
   deinit {
@@ -114,7 +115,7 @@ internal final class InsulatedVersionedValueRelay<Value>: Publisher, Sendable {
 
   func receive(subscriber: some Subscriber<Output, Never>) {
     let subscription = SubscriptionImp(upstream: self, downstream: .versionedValue(subscriber))
-    _dataState.withLock {
+    _properties.withLock {
       $0.subscriptions.append(subscription)
     }
     subscriber.receive(subscription: subscription)
@@ -122,7 +123,7 @@ internal final class InsulatedVersionedValueRelay<Value>: Publisher, Sendable {
 
   private func receive(subscriberVariant: SubscriberVariant) {
     let subscription = SubscriptionImp(upstream: self, downstream: subscriberVariant)
-    _dataState.withLock {
+    _properties.withLock {
       $0.subscriptions.append(subscription)
     }
 
@@ -144,8 +145,27 @@ internal final class InsulatedVersionedValueRelay<Value>: Publisher, Sendable {
     // send(completion: .finished)
   }
 
+  // MARK: - Private Imp
+
+  fileprivate func remove(_ subscription: SubscriptionImp) {
+    _properties.withLock {
+      guard let index = $0.subscriptions.firstIndex(of: subscription) else { return }
+      $0.subscriptions.remove(at: index)
+    }
+  }
+}
+
+// MARK: - Sync Access
+
+extension InsulatedVersionedValueRelay { // where Value: ~Sendable
+  fileprivate final var uncheckedSendable_valueSnapshot: SequentialSnapshot<Value> {
+    _properties.withLockUncheckedSending {
+      SequentialSnapshot(value: $0.value, version: $0.version, sourceID: id)
+    }
+  }
+
   internal func send(nextValue value: Value) {
-    _dataState.withLock {
+    _properties.withLock {
       $0.version += 1
       $0.value = value
       // !!!
@@ -156,9 +176,9 @@ internal final class InsulatedVersionedValueRelay<Value>: Publisher, Sendable {
     }
   }
 
-  internal final func withInoutAccess<R>(_ access: (inout Value) -> sending R)
+  internal final func withLockAlwaysEmittingMutableAccess<R>(_ access: (inout Value) -> sending R)
     -> sending R {
-    _dataState.withLock {
+    _properties.withLock {
       $0.version += 1
       let result = access(&$0.value)
       let snapshot = SequentialSnapshot(value: $0.value, version: $0.version, sourceID: id)
@@ -168,45 +188,30 @@ internal final class InsulatedVersionedValueRelay<Value>: Publisher, Sendable {
       return result
     }
   }
-
-//   internal final func withLockEmittingOnMutableAccess<R>(_ access: (inout Value) -> sending R)
-//   -> sending R {
-//  
-//   }
-  
-//  @inline(always)
-//  func withLockEmittingOnMutableAccess<R: Sendable, E: Error>(
-//    _ access: (inout GenericStateAccessHandle<Value>) throws(E) -> R,
-//    whenMutablyAccessedDo: (borrowing GenericStateAccessHandle<Value>) -> Void,
-//  )
-//    throws(E) -> R {
-//    try _dataState.withLockMutableAccess(access, whenMutablyAccessedDo: whenMutablyAccessedDo)
-//  }
-
-  // MARK: - Private Imp
-
-  fileprivate func remove(_ subscription: SubscriptionImp) {
-    _dataState.withLock {
-      guard let index = $0.subscriptions.firstIndex(of: subscription) else { return }
-      $0.subscriptions.remove(at: index)
-    }
-  }
-}
-
-// MARK: - Sync Access
-
-extension InsulatedVersionedValueRelay {
-  fileprivate final var uncheckedSendable_valueSnapshot: SequentialSnapshot<Value> {
-    _dataState.withLockUncheckedSending {
-      SequentialSnapshot(value: $0.value, version: $0.version, sourceID: id)
-    }
-  }
 }
 
 extension InsulatedVersionedValueRelay where Value: Sendable {
   final var valueSnapshot: SequentialSnapshot<Value> {
-    _dataState.withLock {
+    _properties.withLock {
       SequentialSnapshot(value: $0.value, version: $0.version, sourceID: id)
+    }
+  }
+
+  internal final func withLockEmittingOnMutableAccess<R: Sendable, E: Error>(
+    _ access: (inout GenericStateAccessHandle<Value>) throws(E) -> R,
+  ) throws(E) -> R {
+    try _properties.withLock { properties throws(E) -> R in
+      var accessHandle = GenericStateAccessHandle(mutableRef: _MutableRef(&properties.value))
+      let result = try access(&accessHandle)
+
+      if accessHandle._isMutablyAccessed {
+        let snapshot = SequentialSnapshot(value: properties.value, version: properties.version, sourceID: id)
+        for subscription in properties.subscriptions {
+          subscription.receive(snapshot)
+        }
+      }
+
+      return result
     }
   }
 }
