@@ -117,7 +117,7 @@ extension InsulatedVersionedValueRelay { // where Value: ~Sendable
       
       if !$0.subscriptions.isEmpty {
         let snapshot = SequentialSnapshot(value: $0.value, version: $0.version, sourceID: id)
-        for subscription in $0.subscriptions {
+        $0.subscriptions.forEach { subscription in
           subscription.receive(snapshot)
         }
       }
@@ -132,7 +132,7 @@ extension InsulatedVersionedValueRelay { // where Value: ~Sendable
       
       if !$0.subscriptions.isEmpty {
         let snapshot = SequentialSnapshot(value: $0.value, version: $0.version, sourceID: id)
-        for subscription in $0.subscriptions {
+        $0.subscriptions.forEach { subscription in
           subscription.receive(snapshot)
         }
       }
@@ -158,7 +158,7 @@ extension InsulatedVersionedValueRelay where Value: Sendable {
 
       if accessHandle._isMutablyAccessed, !properties.subscriptions.isEmpty {
         let snapshot = SequentialSnapshot(value: properties.value, version: properties.version, sourceID: id)
-        for subscription in properties.subscriptions {
+        properties.subscriptions.forEach { subscription in
           subscription.receive(snapshot)
         }
       }

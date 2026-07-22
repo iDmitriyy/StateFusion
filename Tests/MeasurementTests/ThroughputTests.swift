@@ -30,12 +30,19 @@ struct ThroughputTests: ~Copyable {
   
   /// Measures elements-per-second throughput for both publishers with active subscribers.
   @Test func `Elements Per Second`() {
+    `Elements Per Second`(withSubscriber: false)
+    `Elements Per Second`(withSubscriber: true)
+  }
+  
+  private func `Elements Per Second`(withSubscriber: Bool) {
     let currentValueSubject = CurrentValueSubject<Int, Never>(0)
     let versionedValueRelay = InsulatedVersionedValueRelay<Int>(_value: 0)
     
-    bag.insert {
-      currentValueSubject.sink { _ in }
-      versionedValueRelay.sink { _ in }
+    if withSubscriber {
+      bag.insert {
+        currentValueSubject.sink { _ in }
+        versionedValueRelay.sink { _ in }
+      }
     }
     
     let (_, msCurrentValueSubject) = performMeasuredAction(count: outer) {
@@ -58,7 +65,7 @@ struct ThroughputTests: ~Copyable {
     // CurrentValueSubject  9565905
     // VersionedValueRelay  187149
 
-    printTable("Elements Per Second With Subscriber",
+    printTable("Elements Per Second " + (withSubscriber ? "With Subscriber" : "No Subscriber"),
                decimalDigits: 0,
                rows: [("CurrentValueSubject", thCurrentValueSubject),
                       ("VersionedValueRelay", thVersionedValueRelay)])
