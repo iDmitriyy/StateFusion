@@ -5,8 +5,8 @@
 //  Created by Dmitriy Ignatyev on 15.06.2026.
 //
 
-public import class Foundation.NSRecursiveLock
-import Synchronization
+import class Foundation.NSRecursiveLock
+import struct Synchronization._Cell
 
 // MARK: - RecursiveLock
 

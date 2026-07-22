@@ -47,93 +47,159 @@ struct RecursiveLockTests {
     }
   }
 
-  @Test func `Access Variants Write`() {
+  @Test func `MutableAccess WriteOnly`() {
+    `MutableAccess WriteOnly Backported.MutableRef`()
+    `MutableAccess WriteOnly Swift.MutableRef`()
+  }
+
+  private func `MutableAccess WriteOnly Swift.MutableRef`() {
     if #available(macOS 26.0, *) {
-//      let obj1 = Object_SwiftRef.shared
-//
-//      let (_, inoutAccess) = performMeasuredAction(count: outer) {
-//        for _ in 1...inner {
-//          obj1.withLockInout { dataState in
-//            dataState.number += 1
-//          }
-//        }
-//      }
-//
-//      let (_, pointerAccess) = performMeasuredAction(count: outer) {
-//        for _ in 1...inner {
-//          obj1.withLockPointer { dataStatePointer in
-//            dataStatePointer.pointee.number += 1
-//          }
-//        }
-//      }
+      let obj1 = Object_SwiftRef.shared
 
-//      let mutableAccessDoWithCopy: Double
-//      let mutableAccessDoWithRefHandle: Double
-//      if #available(macOS 9999, *) {
-//        (_, mutableAccessDoWithCopy) = performMeasuredAction(count: outer) {
-//          for _ in 1...inner {
-//            obj1.withLockMutableAccess_borrowing {
-//              $0.stateEntity.number += 1
-//            } whenMutablyAccessedDo: { _ in
-//            }
-//          }
-//        }
-//
-//        (_, mutableAccessDoWithRefHandle) = performMeasuredAction(count: outer) {
-//          for _ in 1...inner {
-//            obj1.withLockMutableAccess_handle {
-//              $0.stateEntity.number += 1
-//            } whenMutablyAccessedDo: { _ in
-//            }
-//          }
-//        }
-//        // 56.7008 when no mutableAccess tracking
-//      } else {
-//        mutableAccessDoWithCopy = .nan
-//        mutableAccessDoWithRefHandle = .nan
-//      }
+      let (_, inoutAccess) = performMeasuredAction(count: outer) {
+        for _ in 1...inner {
+          obj1.withLockInout { dataState in
+            dataState.number += 1
+          }
+        }
+      }
 
-//      print("___", inoutAccess, pointerAccess, mutableAccessTracking)
+      let (_, pointerAccess) = performMeasuredAction(count: outer) {
+        for _ in 1...inner {
+          obj1.withLockPointer { dataStatePointer in
+            dataStatePointer.pointee.number += 1
+          }
+        }
+      }
 
-//      printTable("Swift.MutRef", rows: [("inout", 0.0),
-//                                        ("pointer", 0.0),
-//                                        ("with mutableAccess tracking, DoWithCopy", 0.0),
-//                                        ("with mutableAccess tracking, DoWithRefHandle", 0.0)])
+      let mutableAccessDoWithCopy: Double
+      let mutableAccessDoWithRefHandle: Double
+      if #available(macOS 9999, *) {
+        (_, mutableAccessDoWithCopy) = performMeasuredAction(count: outer) {
+          for _ in 1...inner {
+            obj1.withLockMutableAccess_borrowing {
+              $0.stateEntity.number += 1
+            } whenMutablyAccessedDo: { _ in
+            }
+          }
+        }
 
-//      printTable("Current Imp", rows: [("inout", 0),
-//                                       ("pointer", 0)])
+        (_, mutableAccessDoWithRefHandle) = performMeasuredAction(count: outer) {
+          for _ in 1...inner {
+            obj1.withLockMutableAccess_handle {
+              $0.stateEntity.number += 1
+            } whenMutablyAccessedDo: { _ in
+            }
+          }
+        }
+        // 56.7008 when no mutableAccess tracking
+      } else {
+        mutableAccessDoWithCopy = .nan
+        mutableAccessDoWithRefHandle = .nan
+      }
+
+      printTable("MutableAccess WriteOnly Swift.MutRef",
+                 rows: [("inout", inoutAccess),
+                        ("pointer", pointerAccess),
+                        ("with mutableAccess tracking, DoWithRefHandle", mutableAccessDoWithRefHandle),
+                        ("with mutableAccess tracking, DoWithCopy", mutableAccessDoWithCopy)])
     }
   }
-  
+
+  private func `MutableAccess WriteOnly Backported.MutableRef`() {
+    if #available(macOS 26.0, *) {
+      let obj1 = Object_BackportedRef.shared
+
+      let (_, inoutAccess) = performMeasuredAction(count: outer) {
+        for _ in 1...inner {
+          obj1.withLockInout { dataState in
+            dataState.number += 1
+          }
+        }
+      }
+
+      let (_, mutableAccessDoWithRefHandle) = performMeasuredAction(count: outer) {
+        for _ in 1...inner {
+          obj1.withLockMutableAccess_handle {
+            $0.stateEntity.number += 1
+          } whenMutablyAccessedDo: { _ in
+          }
+        }
+      }
+
+      printTable("MutableAccess WriteOnly Backported.MutableRef",
+                 rows: [("inout", inoutAccess),
+                        ("with mutableAccess tracking, DoWithRefHandle", mutableAccessDoWithRefHandle)])
+    }
+  }
+}
+
+//===-------------------------------------------------------------------------------------------------------------------===//
+
+// MARK: - Backported _MutableRef Handle
+
+extension RecursiveLockTests {
+  @available(anyAppleOS 26.0, *)
+  final class Object_BackportedRef: Sendable {
+    /// static made for rejecting class stack allocation and allocate it in heap
+    static let shared = Object_BackportedRef()
+
+    let lock = RecursiveLock(DataState_SendableExample())
+
+    @inline(always)
+    func withLockInout<Result: ~Copyable, E: Error>(
+      _ body: (inout sending DataState_SendableExample) throws(E) -> sending Result,
+    ) throws(E) -> sending Result {
+      try lock.withLock(body)
+    }
+
+    @inline(always)
+    final func withLockMutableAccess_handle<R: Sendable, E: Error>(
+      _ access: (inout GenericStateAccessHandle<DataState_SendableExample>) throws(E) -> R,
+      whenMutablyAccessedDo: (borrowing GenericStateAccessHandle<DataState_SendableExample>) -> Void,
+    )
+      throws(E) -> R {
+      try lock.withLockMutableAccess(access, whenMutablyAccessedDo: whenMutablyAccessedDo)
+    }
+  }
+}
+
+//===-------------------------------------------------------------------------------------------------------------------===//
+
+// MARK: - Swift.MutableRef Handle + Pointer
+
+extension RecursiveLockTests {
   @available(anyAppleOS 26.0, *)
   final class Object_SwiftRef: Sendable {
-    // static made for rejecting class stack allocation and allocate it in heap
+    /// static made for rejecting class stack allocation and allocate it in heap
     static let shared = Object_SwiftRef()
 
     let lock = RecursiveLockClass(DataState_SendableExample())
 
+    @inline(always)
     func withLockInout<Result: ~Copyable, E: Error>(
       _ body: (inout sending DataState_SendableExample) throws(E) -> sending Result,
     ) throws(E) -> sending Result {
       try lock.withLockInout(body)
     }
 
+    @inline(always)
     func withLockPointer<Result: ~Copyable, E: Error>(
       _ body: (UnsafeMutablePointer<DataState_SendableExample>) throws(E) -> Result,
     ) throws(E) -> Result {
       try lock.withLockPointer(body)
     }
 
-    @inlinable @inline(always)
-    @available(macOS 9999, *)
+    @available(anyAppleOS 9999, *)
+    @inline(always)
     final func withLockMutableAccess_borrowing<R, E: Error>(_ access: (inout SwiftMutRefAccessHandle<DataState_SendableExample>) throws(E) -> sending R,
                                                             whenMutablyAccessedDo: (borrowing DataState_SendableExample) -> Void)
       throws(E) -> sending R {
       try lock.withLockMutableAccess_borrowing(access, whenMutablyAccessedDo: whenMutablyAccessedDo)
     }
 
-    @inlinable @inline(always)
-    @available(macOS 9999, *)
+    @available(anyAppleOS 9999, *)
+    @inline(always)
     final func withLockMutableAccess_handle<R, E: Error>(_ access: (inout SwiftMutRefAccessHandle<DataState_SendableExample>) throws(E) -> sending R,
                                                          whenMutablyAccessedDo: (borrowing SwiftMutRefAccessHandle<DataState_SendableExample>) -> Void)
       throws(E) -> sending R {
@@ -212,7 +278,8 @@ extension RecursiveLockTests.RecursiveLockClass where Value: Sendable {
 
 @available(anyAppleOS 9999, *)
 public struct SwiftMutRefAccessHandle<StateEntity: ~Copyable>: ~Copyable, ~Escapable {
-  @inlinable @inline(always)
+  @_alwaysEmitIntoClient
+  @_transparent
   public var stateEntity: StateEntity {
     @inlinable @inline(always)
     borrow {

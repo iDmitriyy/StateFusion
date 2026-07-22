@@ -26,10 +26,13 @@ func printTable(_ title: String,
   let separator = String(repeating: "─", count: tableWidth)
 
   let titlePadding = String(repeating: " ", count: max(0, (tableWidth - title.count) / 2))
+  
+  print("")
   print("\(titlePadding)\(title)")
   print(separator)
   for (name, value) in formatted {
     let pad = String(repeating: " ", count: max(0, valueWidth - value.count))
     print("\(name.padding(toLength: nameWidth, withPad: " ", startingAt: 0))  \(pad)\(value)")
   }
+  print("")
 }
