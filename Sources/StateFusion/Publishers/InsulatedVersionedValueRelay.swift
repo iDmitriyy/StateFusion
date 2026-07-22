@@ -13,9 +13,8 @@ import Synchronization
 
 /// A thread-safe relay that holds a versioned value and publishes updates to subscribers.
 ///
-/// `InsulatedVersionedValueRelay` provides a thread-safe container for a single value
-/// that can be observed by multiple subscribers. Each mutation increments a version number,
-/// allowing subscribers to detect and skip missed updates.
+/// Each mutation increments a version number,
+/// allowing subscribers to detect missed updates.
 ///
 /// The relay maintains internal synchronization using a `RecursiveLock`, ensuring that
 /// concurrent reads and writes are safe. Subscribers receive values in the order they
