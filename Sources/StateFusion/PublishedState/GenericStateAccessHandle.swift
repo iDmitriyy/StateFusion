@@ -11,10 +11,10 @@ import Builtin
 
 // https://github.com/swiftlang/swift/blob/a0b56234e1597d77b6d8a1154086590fad257196/stdlib/public/core/LifetimeManager.swift#L125
 
+@frozen
 public struct GenericStateAccessHandle<StateEntity: ~Copyable>: ~Copyable, ~Escapable {
-//  @_alwaysEmitIntoClient
-//  @_transparent
-  @inlinable @inline(always)
+  @_alwaysEmitIntoClient
+  @_transparent
   public var stateEntity: StateEntity {
     borrow {
       _mutableRef.value
