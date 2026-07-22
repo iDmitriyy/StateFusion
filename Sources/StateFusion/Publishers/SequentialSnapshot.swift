@@ -72,6 +72,13 @@ public struct SequentialSnapshot<T> {
     _version = version
     _sourceID = sourceID
   }
+  
+  @_spi(PerformanceMeasuring)
+  public init(_value value: T, _version version: UInt32, _sourceID sourceID: SourceID) {
+    self.value = value
+    _version = version
+    _sourceID = sourceID
+  }
 }
 
 extension SequentialSnapshot: Sendable where T: Sendable {}
