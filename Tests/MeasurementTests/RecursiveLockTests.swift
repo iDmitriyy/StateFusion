@@ -9,12 +9,24 @@ import class Foundation.NSRecursiveLock
 import StateFusion
 import Testing
 
+/// Tests measuring performance of mutable state access patterns under lock protection.
+///
+/// These measurements compare different access strategies for locked mutable state:
+/// - `inout` access (direct value reference)
+/// - `pointer` access (unsafe pointer dereference)
+/// - `MutableAccessHandle`, measuring mutation detection overhead.
+///
+/// The tests benchmark two lock implementations:
+/// - Current library `RecursiveLock` imp with `GenericStateAccessHandle` using backported `MutableRef` (BackportedRef_TestObject)
+/// - Custom `RecursiveLockClass` with `Swift.MutableRef` (SwiftRef_TestObject)
 struct RecursiveLockTests {
   let outer: Int = 1000
   let inner: Int = 1000
   
-  // MARK: - MytableAccess : ReadOnly
+  // MARK: - MutableAccess : ReadOnly
   
+  /// Measures read-only access performance across different lock implementations.
+  /// Compares `inout`, `pointer`, and mutableAccess tracking access patterns.
   @Test func `MutableAccess ReadOnly`() {
     `MutableAccess ReadOnly Backported.MutableRef`()
     `MutableAccess ReadOnly Swift.MutableRef`()
@@ -22,7 +34,7 @@ struct RecursiveLockTests {
 
   private func `MutableAccess ReadOnly Swift.MutableRef`() {
     if #available(macOS 26.0, *) {
-      let obj1 = Object_SwiftRef.shared
+      let obj1 = SwiftRef_TestObject.shared
 
       let (_, inoutAccess) = performMeasuredAction(count: outer) {
         for _ in 1...inner {
@@ -76,7 +88,7 @@ struct RecursiveLockTests {
 
   private func `MutableAccess ReadOnly Backported.MutableRef`() {
     if #available(macOS 26.0, *) {
-      let obj1 = Object_BackportedRef.shared
+      let obj1 = BackportedRef_TestObject.shared
 
       let (_, inoutAccess) = performMeasuredAction(count: outer) {
         for _ in 1...inner {
@@ -101,8 +113,10 @@ struct RecursiveLockTests {
     }
   }
   
-  // MARK: - MytableAccess : WriteOnly
-
+  // MARK: - MutableAccess : WriteOnly
+  
+  /// Measures write-only access performance across different lock implementations.
+  /// Compares `inout`, `pointer`, and mutableAccess tracking access patterns.
   @Test func `MutableAccess WriteOnly`() {
     `MutableAccess WriteOnly Backported.MutableRef`()
     `MutableAccess WriteOnly Swift.MutableRef`()
@@ -110,7 +124,7 @@ struct RecursiveLockTests {
 
   private func `MutableAccess WriteOnly Swift.MutableRef`() {
     if #available(macOS 26.0, *) {
-      let obj1 = Object_SwiftRef.shared
+      let obj1 = SwiftRef_TestObject.shared
 
       let (_, inoutAccess) = performMeasuredAction(count: outer) {
         for _ in 1...inner {
@@ -164,7 +178,7 @@ struct RecursiveLockTests {
 
   private func `MutableAccess WriteOnly Backported.MutableRef`() {
     if #available(macOS 26.0, *) {
-      let obj1 = Object_BackportedRef.shared
+      let obj1 = BackportedRef_TestObject.shared
 
       let (_, inoutAccess) = performMeasuredAction(count: outer) {
         for _ in 1...inner {
@@ -189,8 +203,10 @@ struct RecursiveLockTests {
     }
   }
   
-  // MARK: - MytableAccess : Write-Read
-
+  // MARK: - MutableAccess : Write-Read
+  
+  /// Measures combined read/write access performance across different lock implementations.
+  /// Compares `inout`, `pointer`, and mutableAccess tracking access patterns.
   @Test func `MutableAccess Write-Read`() {
     `MutableAccess Write-Read Backported.MutableRef`()
     `MutableAccess Write-Read Swift.MutableRef`()
@@ -198,7 +214,7 @@ struct RecursiveLockTests {
 
   private func `MutableAccess Write-Read Swift.MutableRef`() {
     if #available(macOS 26.0, *) {
-      let obj1 = Object_SwiftRef.shared
+      let obj1 = SwiftRef_TestObject.shared
 
       let (_, inoutAccess) = performMeasuredAction(count: outer) {
         for _ in 1...inner {
@@ -256,7 +272,7 @@ struct RecursiveLockTests {
 
   private func `MutableAccess Write-Read Backported.MutableRef`() {
     if #available(macOS 26.0, *) {
-      let obj1 = Object_BackportedRef.shared
+      let obj1 = BackportedRef_TestObject.shared
 
       let (_, inoutAccess) = performMeasuredAction(count: outer) {
         for _ in 1...inner {
@@ -288,11 +304,13 @@ struct RecursiveLockTests {
 
 // MARK: - Backported:_MutableRef Handle
 
+/// Test object using `RecursiveLock` with `GenericStateAccessHandle` using backported `MutableRef` implementation.
+/// Measures performance of `inout` and `mutableAccess tracking` access patterns.
 extension RecursiveLockTests {
   @available(anyAppleOS 26.0, *)
-  final class Object_BackportedRef: Sendable {
+  final class BackportedRef_TestObject: Sendable {
     /// static made for rejecting class stack allocation and allocate it in heap
-    static let shared = Object_BackportedRef()
+    static let shared = BackportedRef_TestObject()
 
     let lock = RecursiveLock(DataState_SendableExample())
 
@@ -319,10 +337,12 @@ extension RecursiveLockTests {
 // MARK: - Swift:MutableRef Handle | +Pointer access
 
 extension RecursiveLockTests {
+  /// Test object using custom `RecursiveLockClass` with Swift MutableRef.
+  /// Measures performance of `inout`, `pointer`, and mutableAccess tracking access patterns.
   @available(anyAppleOS 26.0, *)
-  final class Object_SwiftRef: Sendable {
+  final class SwiftRef_TestObject: Sendable {
     /// static made for rejecting class stack allocation and allocate it in heap
-    static let shared = Object_SwiftRef()
+    static let shared = SwiftRef_TestObject()
 
     let lock = RecursiveLockClass(DataState_SendableExample())
 
