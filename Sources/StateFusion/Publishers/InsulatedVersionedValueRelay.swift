@@ -315,6 +315,23 @@ extension InsulatedVersionedValueRelay {
     private enum LifecycleStage {
       case active(ActiveState)
       case terminal
+      
+      /// Returns the mutable reference to the ActiveState, if there is one.
+//      @export(implementation)
+//      var activeStateMutableRef: _MutableRef<ActiveState>? {
+//        @_lifetime(&self)
+//        @_transparent
+//        mutating get {
+//          if case .terminal = self {
+//            return nil
+//          }
+//
+//          let ptr = unsafe UnsafeMutablePointer<ActiveState>(
+//            Builtin.unprotectedAddressOf(&self),
+//          )
+//          return unsafe _MutableRef(unsafeAddress: ptr, mutating: &self)
+//        }
+//      }
     }
 
     /// Reference-type state blob so mutations are in-place (no write-back to `stage`).
