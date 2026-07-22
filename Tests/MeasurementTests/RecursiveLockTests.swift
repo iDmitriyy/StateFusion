@@ -22,9 +22,9 @@ import Testing
 struct RecursiveLockTests {
   let outer: Int = 1000
   let inner: Int = 1000
-  
+
   // MARK: - MutableAccess : ReadOnly
-  
+
   /// Measures read-only access performance across different lock implementations.
   /// Compares `inout`, `pointer`, and mutableAccess tracking access patterns.
   @Test func `MutableAccess ReadOnly`() {
@@ -112,9 +112,9 @@ struct RecursiveLockTests {
                         ("with mutableAccess tracking, DoWithRefHandle", mutableAccessDoWithRefHandle)])
     }
   }
-  
+
   // MARK: - MutableAccess : WriteOnly
-  
+
   /// Measures write-only access performance across different lock implementations.
   /// Compares `inout`, `pointer`, and mutableAccess tracking access patterns.
   @Test func `MutableAccess WriteOnly`() {
@@ -202,9 +202,9 @@ struct RecursiveLockTests {
                         ("with mutableAccess tracking, DoWithRefHandle", mutableAccessDoWithRefHandle)])
     }
   }
-  
+
   // MARK: - MutableAccess : Write-Read
-  
+
   /// Measures combined read/write access performance across different lock implementations.
   /// Compares `inout`, `pointer`, and mutableAccess tracking access patterns.
   @Test func `MutableAccess Write-Read`() {
@@ -299,6 +299,14 @@ struct RecursiveLockTests {
     }
   }
 }
+
+//
+
+//
+
+//
+
+//
 
 //===-------------------------------------------------------------------------------------------------------------------===//
 
