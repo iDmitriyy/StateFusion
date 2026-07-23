@@ -240,6 +240,10 @@ public struct CancellationBag: ~Copyable, Sendable {
     }
   }
 
+  // TODO: ?make Storage ~Copyable.
+  // Also deinit does not need withLock – we can access data directly. But if Storage is moveOnly, then
+  // it is needed to be extracted from Mutex. Mutex need to be consumed in deinit which is not possible yet.
+  // https://forums.swift.org/t/pitch-2-allowing-for-partial-mutation-and-consumption-inside-of-non-copyable-type-deinit/88437/3
   private struct Storage {
     var cancellableObjects: OrderedSet<AnyCancellable> = []
     var cancellableExistentials: [any Cancellable] = []

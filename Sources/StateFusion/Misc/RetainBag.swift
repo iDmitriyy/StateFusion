@@ -9,7 +9,7 @@ public final class RetainBag { // Improvement: make ~Copyable to prevent sharing
   private var retainedObjects: [any AnyObject] = []
 
   internal init() {}
-
+  // TODO: - should it be atomic?
   public final func add(object: any AnyObject) {
     guard !retainedObjects.contains(where: { $0 === object }) else {
       return // RIBs.log(.warning, RIBsLogEntry(code: .valueCollision, info: ["object": "\(object)"]))

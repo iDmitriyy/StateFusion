@@ -22,3 +22,10 @@ public typealias AnyInfalliblePublisher<Output> = AnyPublisher<Output, Never>
 // // UIEventStream : UIEventPublisher
 
 // InfallibleValuePublisher
+
+/*
+ In RxSwift, these UI Traits serve three core purposes:
+ 1. they guarantee execution on the MainScheduler
+ 2. prevent streams from erroring out
+ 3. control state replaying (Driver replays the last value, while Signal does not).
+ */

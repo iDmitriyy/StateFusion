@@ -22,7 +22,6 @@ extension Publisher where Failure == Never {
 
 extension CancellationBag {
   /// Task will be cancelled when CancellationBag deinited. e.g. when screen closed
-  @inlinable @inline(always)
   public func insert<Success, Failure>(_ task: Task<Success, Failure>) {
     let anyCancellable = AnyCancellable {
       task.cancel()
@@ -33,7 +32,6 @@ extension CancellationBag {
 }
 
 extension Task {
-  @inlinable @inline(always)
   public func store(in bag: borrowing CancellationBag) {
     bag.insert(self)
   }
