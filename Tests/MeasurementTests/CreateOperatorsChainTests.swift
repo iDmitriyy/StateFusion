@@ -74,7 +74,7 @@ struct CreateOperatorsChainTests {
     }
 
     printTable("OperatorsChain Init",
-               decimalDigits: 0,
+               fractionDigits: 0,
                rows: [("CurrentValueSubject", tCurrentValueSubject),
                       ("CurrentValueSubjectErased", tCurrentValueSubjectErased),
                       ("ValuePublisher", tValuePublisher),

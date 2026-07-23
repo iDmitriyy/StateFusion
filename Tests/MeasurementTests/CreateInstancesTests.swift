@@ -54,7 +54,7 @@ struct CreateInstancesTests {
     }
 
     printTable("Publisher Types Init (\(total))",
-               decimalDigits: 0,
+               fractionDigits: 0,
                rows: [("CurrentValueSubject", tCurrentValueSubject),
                       ("CurrentValueSubjectErased", tCurrentValueSubjectErased),
                       (" PublishedState", tPublishedState),

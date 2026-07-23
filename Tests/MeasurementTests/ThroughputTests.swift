@@ -51,7 +51,7 @@ struct ThroughputTests: ~Copyable {
     let thValuePublisher = totalIterations * (1000 / tValuePublisher)
     
     printTable("Elements Per Second as Publisher",
-               decimalDigits: 0,
+               fractionDigits: 0,
                rows: [("CurrentValueSubject time", tCurrentValueSubject),
                       ("CurrentValueSubject throughput", thCurrentValueSubject),
                       ("  CurrentValueSubjectErased time", tCurrentValueSubjectErased),
@@ -111,7 +111,7 @@ struct ThroughputTests: ~Copyable {
     // VersionedValueRelay  187149
 
     printTable("Elements Per Second " + (withSubscriber ? "With Subscriber" : "No Subscriber"),
-               decimalDigits: 0,
+               fractionDigits: 0,
                rows: [("CurrentValueSubject", thCurrentValueSubject),
                       ("VersionedValueRelay", thVersionedValueRelay)])
   }

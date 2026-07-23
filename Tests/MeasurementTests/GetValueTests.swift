@@ -50,16 +50,16 @@ struct GetValueTests {
       let thPublishedState = totalIterations * (1000 / tPublishedState)
       let thPublishedStateSnapshot = totalIterations * (1000 / tPublishedStateSnapshot)
 
-      printTable("Elements Per Second as Publisher",
-                 decimalDigits: 0,
+      printTable("Synchronous Value Retrievals per second)",
+                 fractionDigits: 0,
                  rows: [("CurrentValueSubject time", tCurrentValueSubject),
                         ("VersionedValueRelay time", tVersionedValueRelay),
                         ("PublishedState time", tPublishedState),
                         ("PublishedStateSnapshot time", tPublishedStateSnapshot),
-                        (" CurrentValueSubject throughput", thCurrentValueSubject),
-                        (" VersionedValueRelay throughput", thVersionedValueRelay),
-                        (" PublishedState throughput", thPublishedState),
-                        (" PublishedStateSnapshot throughput", thPublishedStateSnapshot)])
+                        (" CurrentValueSubject r/s", thCurrentValueSubject),
+                        (" VersionedValueRelay r/s", thVersionedValueRelay),
+                        (" PublishedState r/s", thPublishedState),
+                        (" PublishedStateSnapshot r/s", thPublishedStateSnapshot)])
     }
   }
 }

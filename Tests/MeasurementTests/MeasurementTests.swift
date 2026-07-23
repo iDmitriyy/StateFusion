@@ -140,7 +140,7 @@ struct PlaygroundTests {
       }
       
       printTable("_MPublishedState)",
-                 decimalDigits: 0,
+                 fractionDigits: 0,
                  rows: [("withLockAccess", withLockAccess),
                         ("withLockAccessInlined", withLockAccessInlined),
                         (" withLockAccessMutRef", withLockAccessMutRef),
