@@ -69,7 +69,7 @@ struct ThroughputTests: ~Copyable {
   ///
   /// What measured in common:
   /// - Time to send `inner` (1000) values, repeated `outer` (1000) times
-  /// - Both publishers have a single subscriber attached (via `sink`)
+  /// - Both publishers have with single subscriber attached (via `sink`) and without subscriber.
   ///
   /// The test reveals throughput differences between the two publisher types
   /// under identical workloads, highlighting the overhead of relay

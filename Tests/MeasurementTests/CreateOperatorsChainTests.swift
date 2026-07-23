@@ -9,7 +9,7 @@ public import Combine
 import StateFusion
 import Testing
 
-struct ValuePublisherOperatorsInit {
+struct CreateOperatorsChainTests {
   let outer: Int = 150
   let inner: Int = 1000
 

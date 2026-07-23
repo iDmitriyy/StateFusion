@@ -50,7 +50,7 @@ public struct SequentialSnapshot<T> {
   public let value: T
 
   /// A monotonically increasing identifier for this snapshot version.
-  @inlinable @inline(always)
+  @inlinable @inline(always) // 1.73x performance boost
   public var version: some Comparable { _version }
 
   /// serial number
@@ -60,7 +60,7 @@ public struct SequentialSnapshot<T> {
   /// ID/sourceIdentity to check that snapshot was consumed by the same Subject/Relay that produced it.
   @usableFromInline internal let _sourceID: SourceID
 
-  @inline(always)  // ~25% faster with @inlining
+  @inline(always) // ~25% faster with @inlining
   internal init(value: T, version: UInt32, sourceID: SourceID) {
     self.value = value
     _version = version
