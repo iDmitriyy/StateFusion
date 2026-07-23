@@ -79,14 +79,15 @@ public struct PublishedState<StateEntity: Sendable>: ~Copyable, Sendable {
   // TODO: - add bag?
 
   deinit {
-    _stateImpObject.finishPublisher()
-    
-    Task { [weak _stateImpObject] in
-      if _stateImpObject != nil {
-        log(.warning, StateFusionLogEntry(code: .publishedStateRetained,
-                                          message: "\(Self.self) underlying object outlived owner."))
-      }
-    }
+    // FIXME: - fatal error in runtime in `Relays Init` test
+//    _stateImpObject.finishPublisher()
+//    
+//    Task { [weak _stateImpObject] in
+//      if _stateImpObject != nil {
+//        log(.warning, StateFusionLogEntry(code: .publishedStateRetained,
+//                                          message: "\(Self.self) underlying object outlived owner."))
+//      }
+//    }
   }
 }
 

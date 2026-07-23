@@ -25,50 +25,50 @@ struct ValuePublisherOperatorsInit {
     let currentValuePublisherC = CurrentValuePublisher3(currentValueSubject)
 
     let (_, tCurrentValueSubject) = performMeasuredAction(count: outer) { // reference measurement
-      for _ in 1...inner {
+      for _ in 0..<inner {
         blackHole(currentValueSubject.map { $0 }.map { $0 }.map { $0 }.map { $0 }.map { "\($0)" })
       }
     }
 
     let (_, tCurrentValueSubjectErased) = performMeasuredAction(count: outer) { // reference measurement
-      for _ in 1...inner {
+      for _ in 0..<inner {
         blackHole(currentValueSubject.map { $0 }.map { $0 }.map { $0 }.map { $0 }.map { "\($0)" }.eraseToAnyPublisher())
       }
     }
 
     let (_, tValuePublisher) = performMeasuredAction(count: outer) {
-      for _ in 1...inner {
+      for _ in 0..<inner {
         blackHole(currentValuePublisher.map { $0 }.map { $0 }.map { $0 }.map { $0 }.map { "\($0)" })
       }
     }
 
     let (_, tValuePublisherA) = performMeasuredAction(count: outer) {
-      for _ in 1...inner {
+      for _ in 0..<inner {
         blackHole(currentValuePublisherA.map { $0 }.map { $0 }.map { $0 }.map { $0 }.map { "\($0)" })
       }
     }
     // FIXME: - write difference from map2
     // this variant eliminate nesting in chain "CurrentValuePublisher-Base1-CurrentValuePublisher-Base2..."
     let (_, tValuePublisherB_1) = performMeasuredAction(count: outer) {
-      for _ in 1...inner {
+      for _ in 0..<inner {
         blackHole(currentValuePublisherB.map { $0 }.map { $0 }.map { $0 }.map { $0 }.map { "\($0)" })
       }
     }
 
     let (_, tValuePublisherB_2) = performMeasuredAction(count: outer) {
-      for _ in 1...inner {
+      for _ in 0..<inner {
         blackHole(currentValuePublisherB.map2 { $0 }.map2 { $0 }.map2 { $0 }.map2 { $0 }.map2 { "\($0)" })
       }
     }
 
     let (_, tValuePublisherC_1) = performMeasuredAction(count: outer) {
-      for _ in 1...inner {
+      for _ in 0..<inner {
         blackHole(currentValuePublisherC.map { $0 }.map { $0 }.map { $0 }.map { $0 }.map { "\($0)" })
       }
     }
 
     let (_, tValuePublisherC_2) = performMeasuredAction(count: outer) {
-      for _ in 1...inner {
+      for _ in 0..<inner {
         blackHole(currentValuePublisherC.map2 { $0 }.map2 { $0 }.map2 { $0 }.map2 { $0 }.map2 { "\($0)" })
       }
     }

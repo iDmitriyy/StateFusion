@@ -37,7 +37,7 @@ struct AccessRecursiveLockTests {
       let obj1 = SwiftRef_TestObject.shared
 
       let (_, inoutAccess) = performMeasuredAction(count: outer) {
-        for _ in 1...inner {
+        for _ in 0..<inner {
           obj1.withLockInout { dataState in
             blackHole(dataState)
           }
@@ -45,7 +45,7 @@ struct AccessRecursiveLockTests {
       }
 
       let (_, pointerAccess) = performMeasuredAction(count: outer) {
-        for _ in 1...inner {
+        for _ in 0..<inner {
           obj1.withLockPointer { dataStatePointer in
             blackHole(dataStatePointer.pointee)
           }
@@ -56,7 +56,7 @@ struct AccessRecursiveLockTests {
       let mutableAccessDoWithRefHandle: Double
       if #available(macOS 9999, *) {
         (_, mutableAccessDoWithCopy) = performMeasuredAction(count: outer) {
-          for _ in 1...inner {
+          for _ in 0..<inner {
             obj1.withLockMutableAccess_borrowing {
               blackHole($0.stateEntity)
             } whenMutablyAccessedDo: { _ in
@@ -65,7 +65,7 @@ struct AccessRecursiveLockTests {
         }
 
         (_, mutableAccessDoWithRefHandle) = performMeasuredAction(count: outer) {
-          for _ in 1...inner {
+          for _ in 0..<inner {
             obj1.withLockMutableAccess_handle {
               blackHole($0.stateEntity)
             } whenMutablyAccessedDo: { _ in
@@ -91,7 +91,7 @@ struct AccessRecursiveLockTests {
       let obj1 = BackportedRef_TestObject.shared
 
       let (_, inoutAccess) = performMeasuredAction(count: outer) {
-        for _ in 1...inner {
+        for _ in 0..<inner {
           obj1.withLockInout { dataState in
             blackHole(dataState)
           }
@@ -99,7 +99,7 @@ struct AccessRecursiveLockTests {
       }
 
       let (_, mutableAccessDoWithRefHandle) = performMeasuredAction(count: outer) {
-        for _ in 1...inner {
+        for _ in 0..<inner {
           obj1.withLockMutableAccess_handle {
             blackHole($0.stateEntity)
           } whenMutablyAccessedDo: { _ in
@@ -127,7 +127,7 @@ struct AccessRecursiveLockTests {
       let obj1 = SwiftRef_TestObject.shared
 
       let (_, inoutAccess) = performMeasuredAction(count: outer) {
-        for _ in 1...inner {
+        for _ in 0..<inner {
           obj1.withLockInout { dataState in
             dataState.number += 1
           }
@@ -135,7 +135,7 @@ struct AccessRecursiveLockTests {
       }
 
       let (_, pointerAccess) = performMeasuredAction(count: outer) {
-        for _ in 1...inner {
+        for _ in 0..<inner {
           obj1.withLockPointer { dataStatePointer in
             dataStatePointer.pointee.number += 1
           }
@@ -146,7 +146,7 @@ struct AccessRecursiveLockTests {
       let mutableAccessDoWithRefHandle: Double
       if #available(macOS 9999, *) {
         (_, mutableAccessDoWithCopy) = performMeasuredAction(count: outer) {
-          for _ in 1...inner {
+          for _ in 0..<inner {
             obj1.withLockMutableAccess_borrowing {
               $0.stateEntity.number += 1
             } whenMutablyAccessedDo: { _ in
@@ -155,7 +155,7 @@ struct AccessRecursiveLockTests {
         }
 
         (_, mutableAccessDoWithRefHandle) = performMeasuredAction(count: outer) {
-          for _ in 1...inner {
+          for _ in 0..<inner {
             obj1.withLockMutableAccess_handle {
               $0.stateEntity.number += 1
             } whenMutablyAccessedDo: { _ in
@@ -181,7 +181,7 @@ struct AccessRecursiveLockTests {
       let obj1 = BackportedRef_TestObject.shared
 
       let (_, inoutAccess) = performMeasuredAction(count: outer) {
-        for _ in 1...inner {
+        for _ in 0..<inner {
           obj1.withLockInout { dataState in
             dataState.number += 1
           }
@@ -189,7 +189,7 @@ struct AccessRecursiveLockTests {
       }
 
       let (_, mutableAccessDoWithRefHandle) = performMeasuredAction(count: outer) {
-        for _ in 1...inner {
+        for _ in 0..<inner {
           obj1.withLockMutableAccess_handle {
             $0.stateEntity.number += 1
           } whenMutablyAccessedDo: { _ in
@@ -217,7 +217,7 @@ struct AccessRecursiveLockTests {
       let obj1 = SwiftRef_TestObject.shared
 
       let (_, inoutAccess) = performMeasuredAction(count: outer) {
-        for _ in 1...inner {
+        for _ in 0..<inner {
           obj1.withLockInout { dataState in
             dataState.number += 1
             blackHole(dataState)
@@ -226,7 +226,7 @@ struct AccessRecursiveLockTests {
       }
 
       let (_, pointerAccess) = performMeasuredAction(count: outer) {
-        for _ in 1...inner {
+        for _ in 0..<inner {
           obj1.withLockPointer { dataStatePointer in
             dataStatePointer.pointee.number += 1
             blackHole(dataStatePointer.pointee)
@@ -238,7 +238,7 @@ struct AccessRecursiveLockTests {
       let mutableAccessDoWithRefHandle: Double
       if #available(macOS 9999, *) {
         (_, mutableAccessDoWithCopy) = performMeasuredAction(count: outer) {
-          for _ in 1...inner {
+          for _ in 0..<inner {
             obj1.withLockMutableAccess_borrowing {
               $0.stateEntity.number += 1
             } whenMutablyAccessedDo: { stateEntity in
@@ -248,7 +248,7 @@ struct AccessRecursiveLockTests {
         }
 
         (_, mutableAccessDoWithRefHandle) = performMeasuredAction(count: outer) {
-          for _ in 1...inner {
+          for _ in 0..<inner {
             obj1.withLockMutableAccess_handle {
               $0.stateEntity.number += 1
             } whenMutablyAccessedDo: {
@@ -275,7 +275,7 @@ struct AccessRecursiveLockTests {
       let obj1 = BackportedRef_TestObject.shared
 
       let (_, inoutAccess) = performMeasuredAction(count: outer) {
-        for _ in 1...inner {
+        for _ in 0..<inner {
           obj1.withLockInout { dataState in
             dataState.number += 1
             blackHole(dataState)
@@ -284,7 +284,7 @@ struct AccessRecursiveLockTests {
       }
 
       let (_, mutableAccessDoWithRefHandle) = performMeasuredAction(count: outer) {
-        for _ in 1...inner {
+        for _ in 0..<inner {
           obj1.withLockMutableAccess_handle {
             $0.stateEntity.number += 1
           } whenMutablyAccessedDo: {

@@ -18,7 +18,7 @@ struct PlaygroundTests {
       let publishedState = PublishedState(richState)
 
       let (_, withLockAccess) = performMeasuredAction(count: outer) {
-        for _ in 1...inner {
+        for _ in 0..<inner {
           publishedState.withLockAccess { state in
             blackHole(state)
           }
@@ -26,7 +26,7 @@ struct PlaygroundTests {
       }
       
       let (_, withLockMutableAccessRead) = performMeasuredAction(count: outer) {
-        for _ in 1...inner {
+        for _ in 0..<inner {
           publishedState.withLockMutableAccess {
             blackHole($0.stateEntity)
           }
@@ -34,7 +34,7 @@ struct PlaygroundTests {
       }
       
       let (_, withLockMutableAccessWrite) = performMeasuredAction(count: outer) {
-        for _ in 1...inner {
+        for _ in 0..<inner {
           publishedState.withLockMutableAccessStateCompound {
             $0.data.number += 1
           }
@@ -51,7 +51,7 @@ struct PlaygroundTests {
       let publishedState = PublishedState(DataState_Example())
       
       let (_, withLockAccess) = performMeasuredAction(count: outer) {
-        for _ in 1...inner {
+        for _ in 0..<inner {
           publishedState.withLockAccess { state in
             blackHole(state)
           }
@@ -59,7 +59,7 @@ struct PlaygroundTests {
       }
       
       let (_, withLockMutableAccessRead) = performMeasuredAction(count: outer) {
-        for _ in 1...inner {
+        for _ in 0..<inner {
           publishedState.withLockMutableAccess {
             blackHole($0.stateEntity)
           }
@@ -67,7 +67,7 @@ struct PlaygroundTests {
       }
       
       let (_, withLockMutableAccessWrite) = performMeasuredAction(count: outer) {
-        for _ in 1...inner {
+        for _ in 0..<inner {
           publishedState.withLockMutableAccess {
             $0.stateEntity.number += 1
           }
@@ -84,7 +84,7 @@ struct PlaygroundTests {
       let publishedState = _MPublishedState(DataState_Example())
 
       let (_, withLockAccess) = performMeasuredAction(count: outer) {
-        for _ in 1...inner {
+        for _ in 0..<inner {
           publishedState.withLockAccess { state in
             blackHole(state)
           }
@@ -92,7 +92,7 @@ struct PlaygroundTests {
       }
       
       let (_, withLockAccessInlined) = performMeasuredAction(count: outer) {
-        for _ in 1...inner {
+        for _ in 0..<inner {
           publishedState.withLockAccessInlined { state in
             blackHole(state)
           }
@@ -100,7 +100,7 @@ struct PlaygroundTests {
       }
       
       let (_, withLockAccessMutRef) = performMeasuredAction(count: outer) {
-        for _ in 1...inner {
+        for _ in 0..<inner {
           publishedState.withLockAccessMutRef { state in
             blackHole(state.value)
           }
@@ -108,7 +108,7 @@ struct PlaygroundTests {
       }
       
       let (_, withLockAccessMutRefInlined) = performMeasuredAction(count: outer) {
-        for _ in 1...inner {
+        for _ in 0..<inner {
           publishedState.withLockAccessMutRefInlined { state in
             blackHole(state.value)
           }
@@ -116,7 +116,7 @@ struct PlaygroundTests {
       }
       
       let (_, withLockAccessPointer) = performMeasuredAction(count: outer) {
-        for _ in 1...inner {
+        for _ in 0..<inner {
           publishedState.withLockAccessPointer { state in
             blackHole(state.pointee)
           }
@@ -124,7 +124,7 @@ struct PlaygroundTests {
       }
       
       let (_, withLockAccessMutPointerInlined) = performMeasuredAction(count: outer) {
-        for _ in 1...inner {
+        for _ in 0..<inner {
           publishedState.withLockAccessMutPointerInlined { state in
             blackHole(state.pointee)
           }
