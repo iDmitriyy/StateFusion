@@ -12,6 +12,8 @@ struct PlaygroundTests {
   let outer: Int = 1000
   let inner: Int = 1000
   
+  var total: Int { outer * inner }
+  
   @Test func `PublishedState withLockAccess RichState`() {
     if #available(macOS 26.0, *) {
       let richState = StateCompound(state: 0, data: DataState_Example())
@@ -41,8 +43,11 @@ struct PlaygroundTests {
         }
       }
       
-      print("___", withLockAccess, withLockMutableAccessRead, withLockMutableAccessWrite)
-      // 
+      printTable("PublishedState withLockAccess)",
+                 decimalDigits: 0,
+                 rows: [("withLockAccess", withLockAccess),
+                        ("withLockMutableAccessRead", withLockMutableAccessRead),
+                        ("withLockMutableAccessWrite", withLockMutableAccessWrite)])
     }
   }
   
@@ -74,8 +79,11 @@ struct PlaygroundTests {
         }
       }
       
-      print("___", withLockAccess, withLockMutableAccessRead, withLockMutableAccessWrite)
-      // ___ 86.942413 152.744877 317.02686300000005
+      printTable("PublishedState withLockAccess)",
+                 decimalDigits: 0,
+                 rows: [("withLockAccess", withLockAccess),
+                        ("withLockMutableAccessRead", withLockMutableAccessRead),
+                        ("withLockMutableAccessWrite", withLockMutableAccessWrite)])
     }
   }
   
@@ -130,9 +138,15 @@ struct PlaygroundTests {
           }
         }
       }
-
-      print("___", withLockAccess, withLockAccessInlined, withLockAccessMutRef, withLockAccessMutRefInlined, withLockAccessPointer, withLockAccessMutPointerInlined)
-      // ___ 95.528788 88.474669 158.378432 154.906013 162.00706100000002 160.79825200000002
+      
+      printTable("_MPublishedState)",
+                 decimalDigits: 0,
+                 rows: [("withLockAccess", withLockAccess),
+                        ("withLockAccessInlined", withLockAccessInlined),
+                        (" withLockAccessMutRef", withLockAccessMutRef),
+                        (" withLockAccessMutRefInlined", withLockAccessMutRefInlined),
+                        ("withLockAccessPointer", withLockAccessPointer),
+                        ("withLockAccessMutPointerInlined", withLockAccessMutPointerInlined)])
     }
   }
 }
