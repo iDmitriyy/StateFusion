@@ -148,6 +148,16 @@ extension InsulatedVersionedValueRelay where Value: Sendable {
       SequentialSnapshot(value: $0.value, version: $0.version, sourceID: id)
     }
   }
+  
+  public final func withLockReadOnlyAccess<R, E: Error>(
+    _ access: (borrowing GenericStateAccessHandle<Value>) throws(E) -> R,
+  ) throws(E) -> R {
+    try _properties.withLock { properties throws(E) -> R in
+      let accessHandle = GenericStateAccessHandle(mutableRef: _MutableRef(&properties.value))
+      let result = try access(accessHandle)
+      return result
+    }
+  }
 
   public final func withLockEmittingOnMutableAccess<R, E: Error>(
     _ access: (inout GenericStateAccessHandle<Value>) throws(E) -> R,

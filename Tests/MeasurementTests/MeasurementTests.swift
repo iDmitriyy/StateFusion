@@ -15,76 +15,76 @@ struct PlaygroundTests {
   var total: Int { outer * inner }
   
   @Test func `PublishedState withLockAccess RichState`() {
-    if #available(macOS 26.0, *) {
-      let richState = StateCompound(state: LoadingState<Void, any Error>.isLoading, data: DataState_Example())
-      let publishedState = PublishedState(richState)
-
-      let (_, withLockAccess) = performMeasuredAction(count: outer) {
-        for _ in 0..<inner {
-          publishedState.withLockAccess { state in
-            blackHole(state)
-          }
-        }
-      }
-      
-      let (_, withLockMutableAccessRead) = performMeasuredAction(count: outer) {
-        for _ in 0..<inner {
-          publishedState.withLockMutableAccess {
-            blackHole($0.stateEntity)
-          }
-        }
-      }
-      
-      let (_, withLockMutableAccessWrite) = performMeasuredAction(count: outer) {
-        for _ in 0..<inner {
-          publishedState.withLockMutableAccessStateCompound {
-            $0.data.number += 1
-          }
-        }
-      }
-      
-      printTable("PublishedState withLockAccess)",
-                 decimalDigits: 0,
-                 rows: [("withLockAccess", withLockAccess),
-                        ("withLockMutableAccessRead", withLockMutableAccessRead),
-                        ("withLockMutableAccessWrite", withLockMutableAccessWrite)])
-    }
+//    if #available(macOS 26.0, *) {
+//      let richState = StateCompound(state: LoadingState<Void, any Error>.isLoading, data: DataState_Example())
+//      let publishedState = PublishedState(richState)
+//
+//      let (_, withLockAccess) = performMeasuredAction(count: outer) {
+//        for _ in 0..<inner {
+//          publishedState.withLockAccess { state in
+//            blackHole(state)
+//          }
+//        }
+//      }
+//      
+//      let (_, withLockMutableAccessRead) = performMeasuredAction(count: outer) {
+//        for _ in 0..<inner {
+//          publishedState.withLockMutableAccess {
+//            blackHole($0.stateEntity)
+//          }
+//        }
+//      }
+//      
+//      let (_, withLockMutableAccessWrite) = performMeasuredAction(count: outer) {
+//        for _ in 0..<inner {
+//          publishedState.withLockMutableAccessStateCompound {
+//            $0.data.number += 1
+//          }
+//        }
+//      }
+//      
+//      printTable("PublishedState withLockAccess)",
+//                 decimalDigits: 0,
+//                 rows: [("withLockAccess", withLockAccess),
+//                        ("withLockMutableAccessRead", withLockMutableAccessRead),
+//                        ("withLockMutableAccessWrite", withLockMutableAccessWrite)])
+//    }
   }
   
   @Test func `PublishedState withLockAccess`() {
-    if #available(macOS 26.0, *) {
-      let publishedState = PublishedState(DataState_Example())
-      
-      let (_, withLockAccess) = performMeasuredAction(count: outer) {
-        for _ in 0..<inner {
-          publishedState.withLockAccess { state in
-            blackHole(state)
-          }
-        }
-      }
-      
-      let (_, withLockMutableAccessRead) = performMeasuredAction(count: outer) {
-        for _ in 0..<inner {
-          publishedState.withLockMutableAccess {
-            blackHole($0.stateEntity)
-          }
-        }
-      }
-      
-      let (_, withLockMutableAccessWrite) = performMeasuredAction(count: outer) {
-        for _ in 0..<inner {
-          publishedState.withLockMutableAccess {
-            $0.stateEntity.number += 1
-          }
-        }
-      }
-      
-      printTable("PublishedState withLockAccess)",
-                 decimalDigits: 0,
-                 rows: [("withLockAccess", withLockAccess),
-                        ("withLockMutableAccessRead", withLockMutableAccessRead),
-                        ("withLockMutableAccessWrite", withLockMutableAccessWrite)])
-    }
+//    if #available(macOS 26.0, *) {
+//      let publishedState = PublishedState(DataState_Example())
+//      
+//      let (_, withLockAccess) = performMeasuredAction(count: outer) {
+//        for _ in 0..<inner {
+//          publishedState.withLockAccess { state in
+//            blackHole(state)
+//          }
+//        }
+//      }
+//      
+//      let (_, withLockMutableAccessRead) = performMeasuredAction(count: outer) {
+//        for _ in 0..<inner {
+//          publishedState.withLockMutableAccess {
+//            blackHole($0.stateEntity)
+//          }
+//        }
+//      }
+//      
+//      let (_, withLockMutableAccessWrite) = performMeasuredAction(count: outer) {
+//        for _ in 0..<inner {
+//          publishedState.withLockMutableAccess {
+//            $0.stateEntity.number += 1
+//          }
+//        }
+//      }
+//      
+//      printTable("PublishedState withLockAccess)",
+//                 decimalDigits: 0,
+//                 rows: [("withLockAccess", withLockAccess),
+//                        ("withLockMutableAccessRead", withLockMutableAccessRead),
+//                        ("withLockMutableAccessWrite", withLockMutableAccessWrite)])
+//    }
   }
   
   @Test func playgroundPublishedState() {

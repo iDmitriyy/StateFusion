@@ -7,19 +7,6 @@
 
 import Combine
 
-internal enum Owning<T: AnyObject> {
-  case retained(T)
-  case borrowed(Weak<T>)
-}
-
-internal struct Weak<T: AnyObject> {
-  weak let instance: T?
-}
-
-internal struct Unowned<T: AnyObject> {
-  unowned let instance: T
-}
-
 extension Publisher where Failure == Never {
   // MARK: -  _filterBy
 
@@ -38,8 +25,8 @@ extension Publisher where Failure == Never {
 
       // evaluationOutput is typically an associated value from old state
       // TODO: add example of extracting associated value from enum-state
-      let evaluationOutput: EvaluationOutput? = publishedState.withLockAccess {
-        let eventFilteringResult = evaluate($0)
+      let evaluationOutput: EvaluationOutput? = publishedState.withLockReadOnlyAccess {
+        let eventFilteringResult = evaluate($0.stateEntity)
         switch consume eventFilteringResult {
         case let .handled(eventFilteringOutput):
           return eventFilteringOutput
@@ -71,8 +58,10 @@ extension Publisher where Failure == Never {
       }
 
       // evaluationOutput is typically an associated value from old state
-      let evaluationOutput: EvaluationOutput? = publishedState.withLockAccess {
-        let eventFilteringResult = evaluate($0.state)
+      let evaluationOutput: EvaluationOutput? = publishedState.withLockReadOnlyAccess {
+        // FIXME: - does withLockReadOnlyAccess suitable here?
+        // is it better to make `withLockReadOnlyAccess` with borrowing arg instead of accessHandle?
+        let eventFilteringResult = evaluate($0.stateEntity.state)
         switch consume eventFilteringResult {
         case let .handled(eventFilteringOutput):
           return eventFilteringOutput
@@ -118,7 +107,7 @@ extension Publisher where Failure == Never {
       }
 
       // `reductionOutput` is typically an associated value from old state
-      let reductionOutput: ReductionOutput? = publishedState.withLockMutableAccess {
+      let reductionOutput: ReductionOutput? = publishedState.withLockEmittingOnMutableAccess {
         let eventOutcome = reduce($0.stateEntity, element)
         switch consume eventOutcome {
         case let .transition(newState, reductionOutput):
@@ -157,7 +146,7 @@ extension Publisher where Failure == Never {
       }
 
       // `reductionOutput` is typically an associated value from old state
-      publishedState.withLockMutableAccess {
+      publishedState.withLockEmittingOnMutableAccess {
         let eventOutcome = reduce($0.stateEntity, element)
         switch consume eventOutcome {
         case let .transition(newState):
@@ -188,7 +177,7 @@ extension Publisher where Failure == Never {
         return nil
       }
 
-      let mutationOutput: MutationOutput = publishedState.withLockMutableAccess {
+      let mutationOutput: MutationOutput = publishedState.withLockEmittingOnMutableAccess {
         mutation(&$0, element)
       }
 
@@ -210,7 +199,7 @@ extension Publisher where Failure == Never {
         return nil
       }
 
-      let mutationOutput: MutationOutput = publishedState.withLockMutableAccessDataState {
+      let mutationOutput: MutationOutput = publishedState.withLockEmittingOnMutableAccessDataState {
         mutation(&$0, element)
       }
 
@@ -236,7 +225,7 @@ extension Publisher where Failure == Never {
         return nil
       }
 
-      let mutationOutput: MutationOutput = publishedState.withLockMutableAccessStateCompound {
+      let mutationOutput: MutationOutput = publishedState.withLockEmittingOnMutableAccessStateCompound {
         mutation(&$0, element)
       }
 
