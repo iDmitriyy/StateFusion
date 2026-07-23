@@ -17,7 +17,7 @@ import Foundation
 /// pointerAccess  41.50
 /// ```
 func printTable(_ title: String,
-                fractionDigits: UInt8 = 2,
+                fractionDigits: UInt8 = 0,
                 rows: [(name: String, value: Double)]) {
   // Helper function to format Double values with underscore thousand separators
   func formatValue(_ value: Double) -> String {

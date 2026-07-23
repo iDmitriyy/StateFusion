@@ -19,24 +19,49 @@ struct PlaygroundTests {
 
   @Test func `Denestify Inlined vs Not Inlined`() {
     if #available(macOS 26.0, *) {
-      let tuple = ((("String_A", "String_B"), "String_C"), Duration(attoseconds: 10))
+      // 1. Setup mock data that changes slightly to keep the compiler honest
+      var tuple = ((("String_A", "String_B"), "String_C"), Duration(attoseconds: 10))
+      var preDenestified = denestify(tuple: tuple)
+      let inner = Int128(inner * 10)
 
-      let (_, tDenestify) = performMeasuredAction(count: outer) {
-        for _ in 0..<inner {
+      // 2. Measure Baseline (Just passing the pre-flattened tuple)
+      let (_, tBaseline) = performMeasuredAction(count: outer) {
+        for i in 0..<inner {
+          // Mutate a small property to prevent loop-invariant code motion
+          preDenestified.3 = Duration(attoseconds: i)
+          blackHole(preDenestified)
+        }
+      }
+
+      // 3. Measure Inlined Execution Profile
+      let (_, tInlined) = performMeasuredAction(count: outer) {
+        for i in 0..<inner {
+          tuple.1 = Duration(attoseconds: i)
           blackHole(denestify(tuple: tuple))
         }
       }
 
-      let (_, tDenestify_noInlining) = performMeasuredAction(count: outer) {
-        for _ in 0..<inner {
+      // 4. Measure Non-Inlined Execution Profile
+      let (_, tNoInlining) = performMeasuredAction(count: outer) {
+        for i in 0..<inner {
+          tuple.1 = Duration(attoseconds: i)
           blackHole(denestify_noInlining(tuple: tuple))
         }
       }
-      
-      printTable("Denestify inlined vs notInlined)",
-                 fractionDigits: 0,
-                 rows: [("denestify", tDenestify),
-                        ("denestify noInlining", tDenestify_noInlining)])
+
+      // 5. Explicitly calculate the clean delta
+      let overheadOfCallStack = (tNoInlining - tBaseline) - (tInlined - tBaseline)
+
+      // 6. Print Values
+      printTable("Denestify Performance",
+                 rows: [
+                  ("  Baseline (no op)", tBaseline),
+                  ("  Denestify (inlined)", tInlined),
+                  ("  Denestify (noInlining)", tNoInlining),
+                  ("Delta: Inlined - Baseline", tInlined - tBaseline),
+                  ("Delta: NoInlining - Baseline", tNoInlining - tBaseline),
+                  ("Function Call Overhead", overheadOfCallStack),
+                 ])
     }
   }
 
