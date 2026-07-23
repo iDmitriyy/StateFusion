@@ -5,9 +5,9 @@
 //  Created by Dmitriy Ignatyev on 12.06.2026.
 //
 
+import Foundation
 import StateFusion
 import Testing
-import Foundation
 
 struct PlaygroundTests {
   let outer: Int = 1000
@@ -17,18 +17,26 @@ struct PlaygroundTests {
     outer * inner
   }
 
-  @Test func Denestify() {
+  @Test func `Denestify Inlined vs Not Inlined`() {
     if #available(macOS 26.0, *) {
-      let tuple = (("DataState_E", "DataState_E"), UUID())
+      let tuple = ((("String_A", "String_B"), "String_C"), Duration(attoseconds: 10))
 
       let (_, tDenestify) = performMeasuredAction(count: outer) {
         for _ in 0..<inner {
           blackHole(denestify(tuple: tuple))
         }
       }
+
+      let (_, tDenestify_noInlining) = performMeasuredAction(count: outer) {
+        for _ in 0..<inner {
+          blackHole(denestify_noInlining(tuple: tuple))
+        }
+      }
       
-      print("___ tDenestify: \(tDenestify)") // tDenestify: 1687.042313
-      // 10.712997000000001
+      printTable("Denestify inlined vs notInlined)",
+                 fractionDigits: 0,
+                 rows: [("denestify", tDenestify),
+                        ("denestify noInlining", tDenestify_noInlining)])
     }
   }
 
@@ -167,4 +175,10 @@ struct PlaygroundTests {
                         ("withLockAccessMutPointerInlined", withLockAccessMutPointerInlined)])
     }
   }
+}
+
+@inline(never)
+fileprivate func denestify_noInlining<A, B, C, D>(tuple: (((A, B), C), D)) -> (A, B, C, D) {
+  let (((a, b), c), d) = tuple
+  return (a, b, c, d)
 }
