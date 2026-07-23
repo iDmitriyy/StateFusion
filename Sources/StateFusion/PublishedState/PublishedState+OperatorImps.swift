@@ -37,6 +37,7 @@ extension Publisher where Failure == Never {
       }
 
       // evaluationOutput is typically an associated value from old state
+      // TODO: add example of extracting associated value from enum-state
       let evaluationOutput: EvaluationOutput? = publishedState.withLockAccess {
         let eventFilteringResult = evaluate($0)
         switch consume eventFilteringResult {
