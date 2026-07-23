@@ -107,13 +107,34 @@ extension PublishedState where StateEntity: AnyObject {
   }
 }
 
-// MARK: - Publisher
+//===-------------------------------------------------------------------------------------------------------------------===//
+
+// MARK: - As Publisher
 
 extension PublishedState {
   public func asPublisher() -> InfallibleValuePublisher<StateEntity> {
     _stateImpObject.asValuePublisher()
   }
 }
+
+// MARK: StateCompound Separate Publishers
+
+extension PublishedState {
+  public func asEnumerableStatePublisher<EnumerableState, DataState>() -> InfallibleValuePublisher<EnumerableState>
+    where StateEntity == StateCompound<EnumerableState, DataState> {
+    asPublisher().map { $0.state }
+    // FIXME: + share() or add sharing arg (shared by default)
+    // do we need to cache `asPublisher().map { $0.state }.shared()` here?
+  }
+
+  public func asDataStatePublisher<EnumerableState, DataState>() -> InfallibleValuePublisher<DataState>
+    where StateEntity == StateCompound<EnumerableState, DataState> {
+    asPublisher().map { $0.data }
+    // FIXME: + share() or add sharing arg (shared by default)
+  }
+}
+
+//===-------------------------------------------------------------------------------------------------------------------===//
 
 // MARK: - Synchronous Thread-Safe access
 
@@ -137,7 +158,30 @@ extension PublishedState {
     }
   }
 
-  /// For mutating `StateCompound` use withLockMutableAccessStateCompound
+  /// Provides mutable access to the state, updating the stored state **only** when a mutation actually occurred.
+  /// For mutating `StateCompound` use withLockMutableAccessStateCompound.
+  ///
+  /// - Parameter access: A closure receiving an `inout AccessHandle`.
+  /// - Returns: The value returned from `access` closure.
+  ///
+  /// ## Semantics
+  /// - Inside `access` closure, read or write `.mutableState` freely.
+  /// - After the closure returns, the published state is updated if
+  ///   a write to `mutableState` happened inside the closure.
+  /// - If no write occurred, the state remains unchanged and no
+  ///   subscribers are notified.
+  ///
+  /// ## Why `AccessHandle` is `~Copyable`
+  /// - Mutation tracking state is tied to a single closure invocation.
+  /// - Copying the handle would break the one‑to‑one relationship
+  ///   between mutation detection and state update.
+  /// - `~Copyable` prevents the handle from crossing isolation regions
+  ///   or being used after the closure ends, enforcing local, single‑owner usage.
+  ///
+  /// ## Rationale
+  /// Encapsulating the mutable state together with its mutation‑tracking
+  /// information in a non‑copyable container makes the write‑only‑if‑mutated
+  /// semantics explicit and compiler‑checked, without exposing internal flags.
   public func withLockEmittingOnMutableAccess<R>(
     _ access: (inout GenericStateAccessHandle<StateEntity>) -> R,
   ) -> R {
@@ -154,22 +198,5 @@ extension PublishedState {
     _ access: (inout StateCompoundDataPropertyAccessHandle<EnumerableState, DataState>) throws(E) -> R,
   ) throws(E) -> R where StateEntity == StateCompound<EnumerableState, DataState> {
     try _stateImpObject.withLockEmittingOnMutableAccessDataState(access)
-  }
-}
-
-// MARK: - StateCompound Separate Publishers
-
-extension PublishedState {
-  public func enumerableStatePublisher<EnumerableState, DataState>() -> InfallibleValuePublisher<EnumerableState>
-    where StateEntity == StateCompound<EnumerableState, DataState> {
-    asPublisher().map { $0.state }
-    // FIXME: + share() or add sharing arg (shared by default)
-    // do we need to cache `asPublisher().map { $0.state }.shared()` here?
-  }
-
-  public func dataStatePublisher<EnumerableState, DataState>() -> InfallibleValuePublisher<DataState>
-    where StateEntity == StateCompound<EnumerableState, DataState> {
-    asPublisher().map { $0.data }
-    // FIXME: + share() or add sharing arg (shared by default)
   }
 }
