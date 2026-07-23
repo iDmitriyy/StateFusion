@@ -149,6 +149,13 @@ extension InsulatedVersionedValueRelay where Value: Sendable {
     }
   }
   
+  @_spi(PerformanceMeasuring)
+  public final var test_get_value: Value {
+    _properties.withLock {
+      $0.value
+    }
+  }
+  
   public final func withLockReadOnlyAccess<R, E: Error>(
     _ access: (borrowing GenericStateAccessHandle<Value>) throws(E) -> R,
   ) throws(E) -> R {

@@ -24,9 +24,10 @@ extension Publishers {
 
 /*
  ValuePublisher operators:
- map combineLatest prepend scan? merge(if oneOf is ValuePublisher) throttle? flatMap? replaceError? removeDuplicates singleElement
+ map combineLatest prepend scan(and all variants)? merge(if oneOf is ValuePublisher) throttle? flatMap? replaceError? removeDuplicates singleElement
  zip replaceNil(with: T) mapError catch share shareReplay(1) multicast(subject:)
  eraseToAnyPublisher handleEvents breakpoint
+ previousAndCurrent
 
  HotPublisher operators:
  debounce delay

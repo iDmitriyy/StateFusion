@@ -118,6 +118,10 @@ extension PublishedState {
 // MARK: - Synchronous Thread-Safe access
 
 extension PublishedState {
+  public var snapshot: SequentialSnapshot<StateEntity> {
+    _stateImpObject.valueSnapshot
+  }
+  
   // withLockWritebackOnMutation withLockTrackedMutation withLockEmittingChangesOnly
   // withLockEmittingOnMutableAccess withLockEmitOnMutation
 
@@ -125,7 +129,7 @@ extension PublishedState {
   // TODO: - ? make `sending R` instead of Sendable
 
   // Read-Only access
-  public func withLockAccess<R: Sendable, E>(
+  public func withLockReadOnlyAccess<R: Sendable, E>(
     _ access: (borrowing GenericStateAccessHandle<StateEntity>) throws(E) -> R,
   ) throws(E) -> R {
     try _stateImpObject.withLockEmittingOnMutableAccess { accessHandle throws(E) -> R in
