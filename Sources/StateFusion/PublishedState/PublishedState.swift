@@ -110,7 +110,7 @@ extension PublishedState where StateEntity: AnyObject {
 // MARK: - Publisher
 
 extension PublishedState {
-  public func asValuePublisher() -> InfallibleValuePublisher<StateEntity> {
+  public func asPublisher() -> InfallibleValuePublisher<StateEntity> {
     _stateImpObject.asValuePublisher()
   }
 }
@@ -126,7 +126,7 @@ extension PublishedState {
 
   // Read-Only access
   public func withLockAccess<R: Sendable, E>(
-    _ access: (borrowing GenericStateAccessHandle<StateEntity>) throws(E) -> R
+    _ access: (borrowing GenericStateAccessHandle<StateEntity>) throws(E) -> R,
   ) throws(E) -> R {
     try _stateImpObject.withLockEmittingOnMutableAccess { accessHandle throws(E) -> R in
       try access(accessHandle)
@@ -135,17 +135,17 @@ extension PublishedState {
 
   /// For mutating `StateCompound` use withLockMutableAccessStateCompound
   public func withLockEmittingOnMutableAccess<R>(
-    _ access: (inout GenericStateAccessHandle<StateEntity>) -> R
+    _ access: (inout GenericStateAccessHandle<StateEntity>) -> R,
   ) -> R {
     _stateImpObject.withLockEmittingOnMutableAccess(access)
   }
 
-  public func withLockEmittingOnMutableAccessStateCompound<EnumerableState, DataState, R, E>(
+  public func withLockEmittingOnMutableAccessStateCompound<EnumerableState, DataState, R: Sendable, E>(
     _ access: (inout StateCompoundAccessHandle<EnumerableState, DataState>) throws(E) -> R,
-  ) throws(E) -> R where R: Sendable, StateEntity == StateCompound<EnumerableState, DataState> {
+  ) throws(E) -> R where StateEntity == StateCompound<EnumerableState, DataState> {
     try _stateImpObject.withLockEmittingOnMutableAccessStateCompound(access)
   }
-  
+
   public func withLockEmittingOnMutableAccessDataState<EnumerableState, DataState, R, E>(
     _ access: (inout StateCompoundDataPropertyAccessHandle<EnumerableState, DataState>) throws(E) -> R,
   ) throws(E) -> R where StateEntity == StateCompound<EnumerableState, DataState> {
@@ -158,12 +158,14 @@ extension PublishedState {
 extension PublishedState {
   public func enumerableStatePublisher<EnumerableState, DataState>() -> InfallibleValuePublisher<EnumerableState>
     where StateEntity == StateCompound<EnumerableState, DataState> {
-    fatalError()
+    asPublisher().map { $0.state }
+    // FIXME: + share() or add sharing arg (shared by default)
+    // do we need to cache `asPublisher().map { $0.state }.shared()` here?
   }
 
-  // FIXME: - implement
   public func dataStatePublisher<EnumerableState, DataState>() -> InfallibleValuePublisher<DataState>
     where StateEntity == StateCompound<EnumerableState, DataState> {
-    fatalError()
+    asPublisher().map { $0.data }
+    // FIXME: + share() or add sharing arg (shared by default)
   }
 }
