@@ -7,73 +7,83 @@
 
 // MARK: - Denestify
 
-// All tuple nesting combinations for arities 3, 4, and 5.
+// All tuple nesting combinations for arity 3, 4, and 5.
 
 // swiftlint:disable large_tuple
 
 // MARK: - 3 Parameters (2 patterns)
 
- @inlinable @_transparent
- public func denestify<A, B, C>(tuple: ((A, B), C)) -> (A, B, C) {
+@inlinable @_transparent // inlining give 5%-1000% performance gain, depending on values passed
+public func denestify<A, B, C>(tuple: ((A, B), C)) -> (A, B, C) {
   let ((a, b), c) = tuple
   return (a, b, c)
- }
+}
 
- @inlinable @_transparent
- public func denestify<A, B, C>(tuple: (A, (B, C))) -> (A, B, C) {
+@inlinable @_transparent
+public func denestify<A, B, C>(tuple: (A, (B, C))) -> (A, B, C) {
   let (a, (b, c)) = tuple
   return (a, b, c)
- }
+}
 
 //===-------------------------------------------------------------------------------------------------------------------===//
 
 // MARK: - 4 Parameters (11 patterns)
 
+@inlinable @_transparent
 public func denestify<A, B, C, D>(tuple: (((A, B), C), D)) -> (A, B, C, D) {
   let (((a, b), c), d) = tuple
   return (a, b, c, d)
 }
 
+@inlinable @_transparent
 public func denestify<A, B, C, D>(tuple: ((A, (B, C)), D)) -> (A, B, C, D) {
   let ((a, (b, c)), d) = tuple
   return (a, b, c, d)
 }
 
+@inlinable @_transparent
 public func denestify<A, B, C, D>(tuple: ((A, B), (C, D))) -> (A, B, C, D) {
   let ((a, b), (c, d)) = tuple
   return (a, b, c, d)
 }
 
+@inlinable @_transparent
 public func denestify<A, B, C, D>(tuple: ((A, B), C, D)) -> (A, B, C, D) {
   let ((a, b), c, d) = tuple
   return (a, b, c, d)
 }
 
+@inlinable @_transparent
 public func denestify<A, B, C, D>(tuple: ((A, B, C), D)) -> (A, B, C, D) {
   let ((a, b, c), d) = tuple
   return (a, b, c, d)
 }
 
+@inlinable @_transparent
 public func denestify<A, B, C, D>(tuple: (A, ((B, C), D))) -> (A, B, C, D) {
   let (a, ((b, c), d)) = tuple
   return (a, b, c, d)
 }
 
+@inlinable @_transparent
 public func denestify<A, B, C, D>(tuple: (A, (B, (C, D)))) -> (A, B, C, D) {
   let (a, (b, (c, d))) = tuple
   return (a, b, c, d)
 }
 
+@inlinable @_transparent
 public func denestify<A, B, C, D>(tuple: (A, (B, C), D)) -> (A, B, C, D) {
   let (a, (b, c), d) = tuple
   return (a, b, c, d)
 }
 
+@inlinable @_transparent
 public func denestify<A, B, C, D>(tuple: (A, (B, C, D))) -> (A, B, C, D) {
   let (a, (b, c, d)) = tuple
   return (a, b, c, d)
 }
 
+@inlinable @_transparent
 public func denestify<A, B, C, D>(tuple: (A, B, (C, D))) -> (A, B, C, D) {
   let (a, b, (c, d)) = tuple
   return (a, b, c, d)
@@ -83,186 +93,223 @@ public func denestify<A, B, C, D>(tuple: (A, B, (C, D))) -> (A, B, C, D) {
 
 // MARK: - 5 Parameters (37 patterns)
 
+@inlinable @_transparent
 public func denestify<A, B, C, D, E>(tuple: ((((A, B), C), D), E)) -> (A, B, C, D, E) {
   let ((((a, b), c), d), e) = tuple
   return (a, b, c, d, e)
 }
 
+@inlinable @_transparent
 public func denestify<A, B, C, D, E>(tuple: (((A, (B, C)), D), E)) -> (A, B, C, D, E) {
   let (((a, (b, c)), d), e) = tuple
   return (a, b, c, d, e)
 }
 
+@inlinable @_transparent
 public func denestify<A, B, C, D, E>(tuple: (((A, B), (C, D)), E)) -> (A, B, C, D, E) {
   let (((a, b), (c, d)), e) = tuple
   return (a, b, c, d, e)
 }
 
+@inlinable @_transparent
 public func denestify<A, B, C, D, E>(tuple: (((A, B), C), (D, E))) -> (A, B, C, D, E) {
   let (((a, b), c), (d, e)) = tuple
   return (a, b, c, d, e)
 }
 
+@inlinable @_transparent
 public func denestify<A, B, C, D, E>(tuple: (((A, B), C), D, E)) -> (A, B, C, D, E) {
   let (((a, b), c), d, e) = tuple
   return (a, b, c, d, e)
 }
 
+@inlinable @_transparent
 public func denestify<A, B, C, D, E>(tuple: (((A, B), C, D), E)) -> (A, B, C, D, E) {
   let (((a, b), c, d), e) = tuple
   return (a, b, c, d, e)
 }
 
+@inlinable @_transparent
 public func denestify<A, B, C, D, E>(tuple: ((A, ((B, C), D)), E)) -> (A, B, C, D, E) {
   let ((a, ((b, c), d)), e) = tuple
   return (a, b, c, d, e)
 }
 
+@inlinable @_transparent
 public func denestify<A, B, C, D, E>(tuple: ((A, (B, (C, D))), E)) -> (A, B, C, D, E) {
   let ((a, (b, (c, d))), e) = tuple
   return (a, b, c, d, e)
 }
 
+@inlinable @_transparent
 public func denestify<A, B, C, D, E>(tuple: ((A, (B, C)), (D, E))) -> (A, B, C, D, E) {
   let ((a, (b, c)), (d, e)) = tuple
   return (a, b, c, d, e)
 }
 
+@inlinable @_transparent
 public func denestify<A, B, C, D, E>(tuple: ((A, (B, C)), D, E)) -> (A, B, C, D, E) {
   let ((a, (b, c)), d, e) = tuple
   return (a, b, c, d, e)
 }
 
+@inlinable @_transparent
 public func denestify<A, B, C, D, E>(tuple: ((A, (B, C, D)), E)) -> (A, B, C, D, E) {
   let ((a, (b, c, d)), e) = tuple
   return (a, b, c, d, e)
 }
 
+@inlinable @_transparent
 public func denestify<A, B, C, D, E>(tuple: ((A, B), ((C, D), E))) -> (A, B, C, D, E) {
   let ((a, b), ((c, d), e)) = tuple
   return (a, b, c, d, e)
 }
 
+@inlinable @_transparent
 public func denestify<A, B, C, D, E>(tuple: ((A, B), (C, (D, E)))) -> (A, B, C, D, E) {
   let ((a, b), (c, (d, e))) = tuple
   return (a, b, c, d, e)
 }
 
+@inlinable @_transparent
 public func denestify<A, B, C, D, E>(tuple: ((A, B), (C, D), E)) -> (A, B, C, D, E) {
   let ((a, b), (c, d), e) = tuple
   return (a, b, c, d, e)
 }
 
+@inlinable @_transparent
 public func denestify<A, B, C, D, E>(tuple: ((A, B), (C, D, E))) -> (A, B, C, D, E) {
   let ((a, b), (c, d, e)) = tuple
   return (a, b, c, d, e)
 }
 
+@inlinable @_transparent
 public func denestify<A, B, C, D, E>(tuple: ((A, B), C, (D, E))) -> (A, B, C, D, E) {
   let ((a, b), c, (d, e)) = tuple
   return (a, b, c, d, e)
 }
 
+@inlinable @_transparent
 public func denestify<A, B, C, D, E>(tuple: ((A, B), C, D, E)) -> (A, B, C, D, E) {
   let ((a, b), c, d, e) = tuple
   return (a, b, c, d, e)
 }
 
+@inlinable @_transparent
 public func denestify<A, B, C, D, E>(tuple: ((A, B, C), (D, E))) -> (A, B, C, D, E) {
   let ((a, b, c), (d, e)) = tuple
   return (a, b, c, d, e)
 }
 
+@inlinable @_transparent
 public func denestify<A, B, C, D, E>(tuple: ((A, B, C), D, E)) -> (A, B, C, D, E) {
   let ((a, b, c), d, e) = tuple
   return (a, b, c, d, e)
 }
 
+@inlinable @_transparent
 public func denestify<A, B, C, D, E>(tuple: ((A, B, C, D), E)) -> (A, B, C, D, E) {
   let ((a, b, c, d), e) = tuple
   return (a, b, c, d, e)
 }
 
+@inlinable @_transparent
 public func denestify<A, B, C, D, E>(tuple: (A, (((B, C), D), E))) -> (A, B, C, D, E) {
   let (a, (((b, c), d), e)) = tuple
   return (a, b, c, d, e)
 }
 
+@inlinable @_transparent
 public func denestify<A, B, C, D, E>(tuple: (A, ((B, (C, D)), E))) -> (A, B, C, D, E) {
   let (a, ((b, (c, d)), e)) = tuple
   return (a, b, c, d, e)
 }
 
+@inlinable @_transparent
 public func denestify<A, B, C, D, E>(tuple: (A, ((B, C), (D, E)))) -> (A, B, C, D, E) {
   let (a, ((b, c), (d, e))) = tuple
   return (a, b, c, d, e)
 }
 
+@inlinable @_transparent
 public func denestify<A, B, C, D, E>(tuple: (A, ((B, C), D), E)) -> (A, B, C, D, E) {
   let (a, ((b, c), d), e) = tuple
   return (a, b, c, d, e)
 }
 
+@inlinable @_transparent
 public func denestify<A, B, C, D, E>(tuple: (A, ((B, C, D), E))) -> (A, B, C, D, E) {
   let (a, ((b, c, d), e)) = tuple
   return (a, b, c, d, e)
 }
 
+@inlinable @_transparent
 public func denestify<A, B, C, D, E>(tuple: (A, (B, ((C, D), E)))) -> (A, B, C, D, E) {
   let (a, (b, ((c, d), e))) = tuple
   return (a, b, c, d, e)
 }
 
+@inlinable @_transparent
 public func denestify<A, B, C, D, E>(tuple: (A, (B, (C, D)), E)) -> (A, B, C, D, E) {
   let (a, (b, (c, d)), e) = tuple
   return (a, b, c, d, e)
 }
 
+@inlinable @_transparent
 public func denestify<A, B, C, D, E>(tuple: (A, (B, (C, D), E))) -> (A, B, C, D, E) {
   let (a, (b, (c, d), e)) = tuple
   return (a, b, c, d, e)
 }
 
+@inlinable @_transparent
 public func denestify<A, B, C, D, E>(tuple: (A, (B, C), (D, E))) -> (A, B, C, D, E) {
   let (a, (b, c), (d, e)) = tuple
   return (a, b, c, d, e)
 }
 
+@inlinable @_transparent
 public func denestify<A, B, C, D, E>(tuple: (A, (B, C), D, E)) -> (A, B, C, D, E) {
   let (a, (b, c), d, e) = tuple
   return (a, b, c, d, e)
 }
 
+@inlinable @_transparent
 public func denestify<A, B, C, D, E>(tuple: (A, (B, C, D), E)) -> (A, B, C, D, E) {
   let (a, (b, c, d), e) = tuple
   return (a, b, c, d, e)
 }
 
+@inlinable @_transparent
 public func denestify<A, B, C, D, E>(tuple: (A, (B, C, D, E))) -> (A, B, C, D, E) {
   let (a, (b, c, d, e)) = tuple
   return (a, b, c, d, e)
 }
 
+@inlinable @_transparent
 public func denestify<A, B, C, D, E>(tuple: (A, B, ((C, D), E))) -> (A, B, C, D, E) {
   let (a, b, ((c, d), e)) = tuple
   return (a, b, c, d, e)
 }
 
+@inlinable @_transparent
 public func denestify<A, B, C, D, E>(tuple: (A, B, (C, (D, E)))) -> (A, B, C, D, E) {
   let (a, b, (c, (d, e))) = tuple
   return (a, b, c, d, e)
 }
 
+@inlinable @_transparent
 public func denestify<A, B, C, D, E>(tuple: (A, B, (C, D), E)) -> (A, B, C, D, E) {
   let (a, b, (c, d), e) = tuple
   return (a, b, c, d, e)
 }
 
+@inlinable @_transparent
 public func denestify<A, B, C, D, E>(tuple: (A, B, (C, D, E))) -> (A, B, C, D, E) {
   let (a, b, (c, d, e)) = tuple
   return (a, b, c, d, e)
 }
 
+@inlinable @_transparent
 public func denestify<A, B, C, D, E>(tuple: (A, B, C, (D, E))) -> (A, B, C, D, E) {
   let (a, b, c, (d, e)) = tuple
   return (a, b, c, d, e)

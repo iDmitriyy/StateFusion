@@ -7,13 +7,31 @@
 
 import StateFusion
 import Testing
+import Foundation
 
 struct PlaygroundTests {
   let outer: Int = 1000
   let inner: Int = 1000
-  
-  var total: Int { outer * inner }
-  
+
+  var total: Int {
+    outer * inner
+  }
+
+  @Test func Denestify() {
+    if #available(macOS 26.0, *) {
+      let tuple = (("DataState_E", "DataState_E"), UUID())
+
+      let (_, tDenestify) = performMeasuredAction(count: outer) {
+        for _ in 0..<inner {
+          blackHole(denestify(tuple: tuple))
+        }
+      }
+      
+      print("___ tDenestify: \(tDenestify)") // tDenestify: 1687.042313
+      // 10.712997000000001
+    }
+  }
+
   @Test func `PublishedState withLockAccess RichState`() {
 //    if #available(macOS 26.0, *) {
 //      let richState = StateCompound(state: LoadingState<Void, any Error>.isLoading, data: DataState_Example())
@@ -26,7 +44,7 @@ struct PlaygroundTests {
 //          }
 //        }
 //      }
-//      
+//
 //      let (_, withLockMutableAccessRead) = performMeasuredAction(count: outer) {
 //        for _ in 0..<inner {
 //          publishedState.withLockMutableAccess {
@@ -34,7 +52,7 @@ struct PlaygroundTests {
 //          }
 //        }
 //      }
-//      
+//
 //      let (_, withLockMutableAccessWrite) = performMeasuredAction(count: outer) {
 //        for _ in 0..<inner {
 //          publishedState.withLockMutableAccessStateCompound {
@@ -42,7 +60,7 @@ struct PlaygroundTests {
 //          }
 //        }
 //      }
-//      
+//
 //      printTable("PublishedState withLockAccess)",
 //                 decimalDigits: 0,
 //                 rows: [("withLockAccess", withLockAccess),
@@ -50,11 +68,11 @@ struct PlaygroundTests {
 //                        ("withLockMutableAccessWrite", withLockMutableAccessWrite)])
 //    }
   }
-  
+
   @Test func `PublishedState withLockAccess`() {
 //    if #available(macOS 26.0, *) {
 //      let publishedState = PublishedState(DataState_Example())
-//      
+//
 //      let (_, withLockAccess) = performMeasuredAction(count: outer) {
 //        for _ in 0..<inner {
 //          publishedState.withLockAccess { state in
@@ -62,7 +80,7 @@ struct PlaygroundTests {
 //          }
 //        }
 //      }
-//      
+//
 //      let (_, withLockMutableAccessRead) = performMeasuredAction(count: outer) {
 //        for _ in 0..<inner {
 //          publishedState.withLockMutableAccess {
@@ -70,7 +88,7 @@ struct PlaygroundTests {
 //          }
 //        }
 //      }
-//      
+//
 //      let (_, withLockMutableAccessWrite) = performMeasuredAction(count: outer) {
 //        for _ in 0..<inner {
 //          publishedState.withLockMutableAccess {
@@ -78,7 +96,7 @@ struct PlaygroundTests {
 //          }
 //        }
 //      }
-//      
+//
 //      printTable("PublishedState withLockAccess)",
 //                 decimalDigits: 0,
 //                 rows: [("withLockAccess", withLockAccess),
@@ -86,7 +104,7 @@ struct PlaygroundTests {
 //                        ("withLockMutableAccessWrite", withLockMutableAccessWrite)])
 //    }
   }
-  
+
   @Test func playgroundPublishedState() {
     if #available(macOS 26.0, *) {
       let publishedState = _MPublishedState(DataState_Example())
@@ -98,7 +116,7 @@ struct PlaygroundTests {
           }
         }
       }
-      
+
       let (_, withLockAccessInlined) = performMeasuredAction(count: outer) {
         for _ in 0..<inner {
           publishedState.withLockAccessInlined { state in
@@ -106,7 +124,7 @@ struct PlaygroundTests {
           }
         }
       }
-      
+
       let (_, withLockAccessMutRef) = performMeasuredAction(count: outer) {
         for _ in 0..<inner {
           publishedState.withLockAccessMutRef { state in
@@ -114,7 +132,7 @@ struct PlaygroundTests {
           }
         }
       }
-      
+
       let (_, withLockAccessMutRefInlined) = performMeasuredAction(count: outer) {
         for _ in 0..<inner {
           publishedState.withLockAccessMutRefInlined { state in
@@ -122,7 +140,7 @@ struct PlaygroundTests {
           }
         }
       }
-      
+
       let (_, withLockAccessPointer) = performMeasuredAction(count: outer) {
         for _ in 0..<inner {
           publishedState.withLockAccessPointer { state in
@@ -130,7 +148,7 @@ struct PlaygroundTests {
           }
         }
       }
-      
+
       let (_, withLockAccessMutPointerInlined) = performMeasuredAction(count: outer) {
         for _ in 0..<inner {
           publishedState.withLockAccessMutPointerInlined { state in
@@ -138,7 +156,7 @@ struct PlaygroundTests {
           }
         }
       }
-      
+
       printTable("_MPublishedState)",
                  fractionDigits: 0,
                  rows: [("withLockAccess", withLockAccess),
