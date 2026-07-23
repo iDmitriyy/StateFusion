@@ -57,4 +57,15 @@ struct CreateInstancesTests {
     
     print("___", t)
   }
+  
+  @Test func `SourceID Init`() {
+    let (_, t) = performMeasuredAction(count: outer) {
+      for _ in 0..<(inner * 10) {
+        blackHole(SourceID())
+      }
+    }
+    
+    print("___", t) // ___ 61.101865000000004
+  }
+  
 }

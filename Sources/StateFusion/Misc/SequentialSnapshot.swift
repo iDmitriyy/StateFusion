@@ -83,7 +83,7 @@ import Synchronization
 public struct SourceID: Sendable, Equatable {
   private let rawValue: UInt
 
-  public init() {
+  public init() { // inlining is meaningless
     let currentID = SourceID.currentID.wrappingAdd(1, ordering: .relaxed).oldValue
     rawValue = currentID
   }
