@@ -6,10 +6,13 @@
 //
 
 // MARK: - Denestify
+//
+// All 52 tuple nesting combinations for arities 3, 4, and 5.
+// Swift standard library style documentation.
 
 // swiftlint:disable large_tuple
 
-// MARK: - 3 Parameters
+// MARK: - 3 Parameters (2 patterns)
 
 public func denestify<A, B, C>(tuple: ((A, B), C)) -> (A, B, C) {
   let ((a, b), c) = tuple
@@ -21,119 +24,201 @@ public func denestify<A, B, C>(tuple: (A, (B, C))) -> (A, B, C) {
   return (a, b, c)
 }
 
-// MARK: - 4 Parameters
+//===-------------------------------------------------------------------------------------------------------------------===//
 
-public func denestify<A, B, C, D>(tuple: (A, (B, C, D))) -> (A, B, C, D) {
-  let (A, (B, C, D)) = tuple
-  return (A, B, C, D)
-}
+// MARK: - 4 Parameters (14 patterns)
 
 public func denestify<A, B, C, D>(tuple: ((A, B), (C, D))) -> (A, B, C, D) {
-  let ((A, B), (C, D)) = tuple
-  return (A, B, C, D)
+  let ((a, b), (c, d)) = tuple
+  return (a, b, c, d)
 }
 
-public func denestify<A, B, C, D>(tuple: ((A, B, C), D)) -> (A, B, C, D) {
-  let ((A, B, C), D) = tuple
-  return (A, B, C, D)
-}
-
-public func denestify<A, B, C, D>(tuple: (A, B, (C, D))) -> (A, B, C, D) {
-  let (A, B, (C, D)) = tuple
-  return (A, B, C, D)
-}
-
-public func denestify<A, B, C, D>(tuple: (A, (B, C), D)) -> (A, B, C, D) {
-  let (A, (B, C), D) = tuple
-  return (A, B, C, D)
+public func denestify<A, B, C, D>(tuple: (((A, B), C), D)) -> (A, B, C, D) {
+  let (((a, b), c), d) = tuple
+  return (a, b, c, d)
 }
 
 public func denestify<A, B, C, D>(tuple: ((A, B), C, D)) -> (A, B, C, D) {
-  let ((A, B), C, D) = tuple
-  return (A, B, C, D)
+  let ((a, b), c, d) = tuple
+  return (a, b, c, d)
 }
 
-// 📝 @iDmitriyy
-// iDmitriyy_TODO: - не учтённый генератором вариант. Доработать чтоб были все варианты.
-public func denestify<A, B, C, D>(tuple: (((A, B), C), D)) -> (A, B, C, D) {
-  let (((A, B), C), D) = tuple
-  return (A, B, C, D)
+public func denestify<A, B, C, D>(tuple: (A, (B, C), D)) -> (A, B, C, D) {
+  let (a, (b, c), d) = tuple
+  return (a, b, c, d)
 }
 
-// MARK: - 5 Parameters
-
-public func denestify<A, B, C, D, E>(tuple: (A, (B, C, D, E))) -> (A, B, C, D, E) {
-  let (A, (B, C, D, E)) = tuple
-  return (A, B, C, D, E)
+public func denestify<A, B, C, D>(tuple: (A, B, (C, D))) -> (A, B, C, D) {
+  let (a, b, (c, d)) = tuple
+  return (a, b, c, d)
 }
 
-public func denestify<A, B, C, D, E>(tuple: ((A, B), (C, D, E))) -> (A, B, C, D, E) {
-  let ((A, B), (C, D, E)) = tuple
-  return (A, B, C, D, E)
+public func denestify<A, B, C, D>(tuple: ((A, (B, C)), D)) -> (A, B, C, D) {
+  let ((a, (b, c)), d) = tuple
+  return (a, b, c, d)
 }
 
-public func denestify<A, B, C, D, E>(tuple: ((A, B, C), (D, E))) -> (A, B, C, D, E) {
-  let ((A, B, C), (D, E)) = tuple
-  return (A, B, C, D, E)
+public func denestify<A, B, C, D>(tuple: (A, ((B, C), D))) -> (A, B, C, D) {
+  let (a, ((b, c), d)) = tuple
+  return (a, b, c, d)
 }
 
-public func denestify<A, B, C, D, E>(tuple: ((A, B, C, D), E)) -> (A, B, C, D, E) {
-  let ((A, B, C, D), E) = tuple
-  return (A, B, C, D, E)
+public func denestify<A, B, C, D>(tuple: (A, (B, (C, D)))) -> (A, B, C, D) {
+  let (a, (b, (c, d))) = tuple
+  return (a, b, c, d)
 }
 
-public func denestify<A, B, C, D, E>(tuple: (A, B, (C, D, E))) -> (A, B, C, D, E) {
-  let (A, B, (C, D, E)) = tuple
-  return (A, B, C, D, E)
+public func denestify<A, B, C, D>(tuple: ((A, B, C), D)) -> (A, B, C, D) {
+  let ((a, b, c), d) = tuple
+  return (a, b, c, d)
 }
 
-public func denestify<A, B, C, D, E>(tuple: (A, (B, C), (D, E))) -> (A, B, C, D, E) {
-  let (A, (B, C), (D, E)) = tuple
-  return (A, B, C, D, E)
+public func denestify<A, B, C, D>(tuple: (A, (B, C, D))) -> (A, B, C, D) {
+  let (a, (b, c, d)) = tuple
+  return (a, b, c, d)
 }
 
-public func denestify<A, B, C, D, E>(tuple: (A, (B, C, D), E)) -> (A, B, C, D, E) {
-  let (A, (B, C, D), E) = tuple
-  return (A, B, C, D, E)
+//===-------------------------------------------------------------------------------------------------------------------===//
+
+// MARK: - 5 Parameters (36 patterns)
+
+public func denestify<A, B, C, D, E>(tuple: ((((A, B), C), D), E)) -> (A, B, C, D, E) {
+  let ((((a, b), c), d), e) = tuple
+  return (a, b, c, d, e)
 }
 
-public func denestify<A, B, C, D, E>(tuple: ((A, B), C, (D, E))) -> (A, B, C, D, E) {
-  let ((A, B), C, (D, E)) = tuple
-  return (A, B, C, D, E)
+public func denestify<A, B, C, D, E>(tuple: (((A, (B, C)), D), E)) -> (A, B, C, D, E) {
+  let (((a, (b, c)), d), e) = tuple
+  return (a, b, c, d, e)
+}
+
+public func denestify<A, B, C, D, E>(tuple: (((A, B), (C, D)), E)) -> (A, B, C, D, E) {
+  let (((a, b), (c, d)), e) = tuple
+  return (a, b, c, d, e)
+}
+
+public func denestify<A, B, C, D, E>(tuple: (((A, B), C), (D, E))) -> (A, B, C, D, E) {
+  let (((a, b), c), (d, e)) = tuple
+  return (a, b, c, d, e)
+}
+
+public func denestify<A, B, C, D, E>(tuple: ((A, ((B, C), D)), E)) -> (A, B, C, D, E) {
+  let ((a, ((b, c), d)), e) = tuple
+  return (a, b, c, d, e)
+}
+
+public func denestify<A, B, C, D, E>(tuple: ((A, (B, (C, D))), E)) -> (A, B, C, D, E) {
+  let ((a, (b, (c, d))), e) = tuple
+  return (a, b, c, d, e)
+}
+
+public func denestify<A, B, C, D, E>(tuple: ((A, (B, C)), (D, E))) -> (A, B, C, D, E) {
+  let ((a, (b, c)), (d, e)) = tuple
+  return (a, b, c, d, e)
+}
+
+public func denestify<A, B, C, D, E>(tuple: ((A, B), ((C, D), E))) -> (A, B, C, D, E) {
+  let ((a, b), ((c, d), e)) = tuple
+  return (a, b, c, d, e)
+}
+
+public func denestify<A, B, C, D, E>(tuple: ((A, B), (C, (D, E)))) -> (A, B, C, D, E) {
+  let ((a, b), (c, (d, e))) = tuple
+  return (a, b, c, d, e)
 }
 
 public func denestify<A, B, C, D, E>(tuple: ((A, B), (C, D), E)) -> (A, B, C, D, E) {
-  let ((A, B), (C, D), E) = tuple
-  return (A, B, C, D, E)
+  let ((a, b), (c, d), e) = tuple
+  return (a, b, c, d, e)
+}
+
+public func denestify<A, B, C, D, E>(tuple: (A, ((((B, C), D), E)))) -> (A, B, C, D, E) {
+  let (a, ((((b, c), d), e))) = tuple
+  return (a, b, c, d, e)
+}
+
+public func denestify<A, B, C, D, E>(tuple: (A, ((B, (C, D)), E))) -> (A, B, C, D, E) {
+  let (a, ((b, (c, d)), e)) = tuple
+  return (a, b, c, d, e)
+}
+
+public func denestify<A, B, C, D, E>(tuple: (A, (B, ((C, D), E)))) -> (A, B, C, D, E) {
+  let (a, (b, ((c, d), e))) = tuple
+  return (a, b, c, d, e)
+}
+
+public func denestify<A, B, C, D, E>(tuple: (A, ((B, C), (D, E)))) -> (A, B, C, D, E) {
+  let (a, ((b, c), (d, e))) = tuple
+  return (a, b, c, d, e)
+}
+
+public func denestify<A, B, C, D, E>(tuple: (((A, B), C, D), E)) -> (A, B, C, D, E) {
+  let (((a, b), c, d), e) = tuple
+  return (a, b, c, d, e)
+}
+
+public func denestify<A, B, C, D, E>(tuple: ((A, (B, C, D)), E)) -> (A, B, C, D, E) {
+  let ((a, (b, c, d)), e) = tuple
+  return (a, b, c, d, e)
+}
+
+public func denestify<A, B, C, D, E>(tuple: ((A, B, C, D), E)) -> (A, B, C, D, E) {
+  let ((a, b, c, d), e) = tuple
+  return (a, b, c, d, e)
+}
+
+public func denestify<A, B, C, D, E>(tuple: (A, (B, C, D, E))) -> (A, B, C, D, E) {
+  let (a, (b, c, d, e)) = tuple
+  return (a, b, c, d, e)
+}
+
+public func denestify<A, B, C, D, E>(tuple: ((A, B), (C, D, E))) -> (A, B, C, D, E) {
+  let ((a, b), (c, d, e)) = tuple
+  return (a, b, c, d, e)
+}
+
+public func denestify<A, B, C, D, E>(tuple: (A, (B, C), (D, E))) -> (A, B, C, D, E) {
+  let (a, (b, c), (d, e)) = tuple
+  return (a, b, c, d, e)
+}
+
+public func denestify<A, B, C, D, E>(tuple: (A, ((B, C, D), E))) -> (A, B, C, D, E) {
+  let (a, ((b, c, d), e)) = tuple
+  return (a, b, c, d, e)
+}
+
+public func denestify<A, B, C, D, E>(tuple: ((A, B, C), (D, E))) -> (A, B, C, D, E) {
+  let ((a, b, c), (d, e)) = tuple
+  return (a, b, c, d, e)
 }
 
 public func denestify<A, B, C, D, E>(tuple: ((A, B, C), D, E)) -> (A, B, C, D, E) {
-  let ((A, B, C), D, E) = tuple
-  return (A, B, C, D, E)
+  let ((a, b, c), d, e) = tuple
+  return (a, b, c, d, e)
 }
 
-public func denestify<A, B, C, D, E>(tuple: (A, B, C, (D, E))) -> (A, B, C, D, E) {
-  let (A, B, C, (D, E)) = tuple
-  return (A, B, C, D, E)
+public func denestify<A, B, C, D, E>(tuple: (A, B, (C, D, E))) -> (A, B, C, D, E) {
+  let (a, b, (c, d, e)) = tuple
+  return (a, b, c, d, e)
 }
 
-public func denestify<A, B, C, D, E>(tuple: (A, B, (C, D), E)) -> (A, B, C, D, E) {
-  let (A, B, (C, D), E) = tuple
-  return (A, B, C, D, E)
+public func denestify<A, B, C, D, E>(tuple: ((A, B), C, (D, E))) -> (A, B, C, D, E) {
+  let ((a, b), c, (d, e)) = tuple
+  return (a, b, c, d, e)
 }
 
-public func denestify<A, B, C, D, E>(tuple: (A, (B, C), D, E)) -> (A, B, C, D, E) {
-  let (A, (B, C), D, E) = tuple
-  return (A, B, C, D, E)
+public func denestify<A, B, C, D, E>(tuple: ((A, (B, C)), D, E)) -> (A, B, C, D, E) {
+  let ((a, (b, c)), d, e) = tuple
+  return (a, b, c, d, e)
 }
 
-public func denestify<A, B, C, D, E>(tuple: ((A, B), C, D, E)) -> (A, B, C, D, E) {
-  let ((A, B), C, D, E) = tuple
-  return (A, B, C, D, E)
+public func denestify<A, B, C, D, E>(tuple: (A, (B, C, D), E)) -> (A, B, C, D, E) {
+  let (a, (b, c, d), e) = tuple
+  return (a, b, c, d, e)
 }
 
-public func denestify<A, B, C, D, E>(tuple: (((A, B, C), D), E)) -> (A, B, C, D, E) {
-  let (((a, b, c), d), e) = tuple
+public func denestify<A, B, C, D, E>(tuple: (A, (B, (C, D)), E)) -> (A, B, C, D, E) {
+  let (a, (b, (c, d)), e) = tuple
   return (a, b, c, d, e)
 }
 
