@@ -16,7 +16,7 @@ struct PlaygroundTests {
   
   @Test func `PublishedState withLockAccess RichState`() {
     if #available(macOS 26.0, *) {
-      let richState = StateCompound(state: 0, data: DataState_Example())
+      let richState = StateCompound(state: LoadingState<Void, any Error>.isLoading, data: DataState_Example())
       let publishedState = PublishedState(richState)
 
       let (_, withLockAccess) = performMeasuredAction(count: outer) {

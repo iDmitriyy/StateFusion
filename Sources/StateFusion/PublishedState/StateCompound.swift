@@ -17,12 +17,13 @@
 /// - **EnumerableState**: Represents the discrete, enumerable **State**  of finite State Machine.
 /// - **DataState**: Represents the **Extended State** (additional data that affects or accompanies transitions).
 /// - **RichState**: Represents the **Composite State** or **State Compound**.
+@frozen
 public struct StateCompound<EnumerableState: ~Copyable, DataState: ~Copyable>: ~Copyable {
-  /// The current discrete state machine component.
+  /// EnumerableState – the current discrete state machine component.
   /// To modify this value, use the appropriate `accessHandle`.
   public fileprivate(set) var state: EnumerableState
 
-  /// The extended contextual data associated with the state.
+  /// DataState – the extended contextual data associated with the state.
   /// To modify this value, use the appropriate `accessHandle`.
   public fileprivate(set) var data: DataState
 
@@ -52,9 +53,8 @@ extension StateCompound: Copyable where EnumerableState: Copyable, DataState: Co
 
 extension StateCompound: Sendable where EnumerableState: Sendable, DataState: Sendable {}
 
-extension StateCompound: Equatable where EnumerableState: Equatable, DataState: Equatable {}
-
 /// Specifies which property was accessed during the write operation that produced this `RichState`.
+@frozen
 public enum StateCompoundWriteOperation: Equatable, Sendable {
   /// The state compound was created for the first time via the initializer.
   case initial
@@ -73,6 +73,10 @@ public enum StateCompoundWriteOperation: Equatable, Sendable {
 
 // MARK: - AccessHandle
 
+/// We can only observe that storage is mutably accessed, but not prove changing really happened.
+/// e.g. someone can write $0.data.searchText = $0.data.searchText – the data is mutably accessed, but it stay the same.
+/// Such cases are rarely expected in real cases though (e.g. this can happen when observing textField.text).
+/// PS: you can use .removeDuplicates() operator for additional guarantees and emission elimination if needed.
 public struct StateCompoundAccessHandle<EnumerableState: ~Copyable, DataState: ~Copyable>: ~Copyable, ~Escapable {
   public var state: EnumerableState {
     borrow {
@@ -93,12 +97,7 @@ public struct StateCompoundAccessHandle<EnumerableState: ~Copyable, DataState: ~
       return &_mutableRef.value.data
     }
   }
-
-  // We can only observe that storage is mutably accessed, but not prove changing really happened.
-  // e.g. someone can write $0.data.searchText = $0.data.searchText – the data is mutated, but it stay the same.
-  // Such cases are not expected in real cases though.
-  // PS: you can use .removeDuplicates() operator for additional guarantees and emission elimination if needed.
-
+  
   private var isEnumerableStateMutablyAccessed: Bool = false
   private var isDataStateMutablyAccessed: Bool = false
 
