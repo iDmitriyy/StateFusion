@@ -17,7 +17,7 @@ struct ValuePublisherOperatorsInit {
   /// using three different approaches for a CurrentValuePublisher.
   /// It specifically bench-marks how the internal storage mechanism of each wrapper affects memory
   /// allocation and CPU time during type initialization.
-  @Test func chainCreation() {
+  @Test func `Operators Chain Creation`() {
     let currentValueSubject = CurrentValueSubject<String, Never>("")
     let currentValuePublisher = CurrentValuePublisher(currentValueSubject) // Library actual implementation
     let currentValuePublisherA = CurrentValuePublisher1(currentValueSubject)
