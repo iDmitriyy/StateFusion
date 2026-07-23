@@ -17,54 +17,6 @@ struct PlaygroundTests {
     outer * inner
   }
 
-  @Test func `Denestify Inlined vs Not Inlined`() {
-    if #available(macOS 26.0, *) {
-      // 1. Setup mock data that changes slightly to keep the compiler honest
-      var tuple = ((("String_A", "String_B"), "String_C"), Duration(attoseconds: 10))
-      var preDenestified = denestify(tuple: tuple)
-      let inner = Int128(inner * 10)
-
-      // 2. Measure Baseline (Just passing the pre-flattened tuple)
-      let (_, tBaseline) = performMeasuredAction(count: outer) {
-        for i in 0..<inner {
-          // Mutate a small property to prevent loop-invariant code motion
-          preDenestified.3 = Duration(attoseconds: i)
-          blackHole(preDenestified)
-        }
-      }
-
-      // 3. Measure Inlined Execution Profile
-      let (_, tInlined) = performMeasuredAction(count: outer) {
-        for i in 0..<inner {
-          tuple.1 = Duration(attoseconds: i)
-          blackHole(denestify(tuple: tuple))
-        }
-      }
-
-      // 4. Measure Non-Inlined Execution Profile
-      let (_, tNoInlining) = performMeasuredAction(count: outer) {
-        for i in 0..<inner {
-          tuple.1 = Duration(attoseconds: i)
-          blackHole(denestify_noInlining(tuple: tuple))
-        }
-      }
-
-      // 5. Explicitly calculate the clean delta
-      let overheadOfCallStack = (tNoInlining - tBaseline) - (tInlined - tBaseline)
-
-      // 6. Print Values
-      printTable("Denestify Performance",
-                 rows: [
-                  ("  Baseline (no op)", tBaseline),
-                  ("  Denestify (inlined)", tInlined),
-                  ("  Denestify (noInlining)", tNoInlining),
-                  ("Delta: Inlined - Baseline", tInlined - tBaseline),
-                  ("Delta: NoInlining - Baseline", tNoInlining - tBaseline),
-                  ("Function Call Overhead", overheadOfCallStack),
-                 ])
-    }
-  }
-
   @Test func `PublishedState withLockAccess RichState`() {
 //    if #available(macOS 26.0, *) {
 //      let richState = StateCompound(state: LoadingState<Void, any Error>.isLoading, data: DataState_Example())
@@ -200,10 +152,4 @@ struct PlaygroundTests {
                         ("withLockAccessMutPointerInlined", withLockAccessMutPointerInlined)])
     }
   }
-}
-
-@inline(never)
-fileprivate func denestify_noInlining<A, B, C, D>(tuple: (((A, B), C), D)) -> (A, B, C, D) {
-  let (((a, b), c), d) = tuple
-  return (a, b, c, d)
 }

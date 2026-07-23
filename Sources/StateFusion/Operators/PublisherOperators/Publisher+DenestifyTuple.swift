@@ -13,7 +13,7 @@
 
 // MARK: - 3 Parameters (2 patterns)
 
-@inlinable @_transparent // inlining give 5%-1000% performance gain, depending on values passed
+@inlinable @_transparent // inlining give 5%-20x performance gain, depending on values passed
 public func denestify<A, B, C>(tuple: ((A, B), C)) -> (A, B, C) {
   let ((a, b), c) = tuple
   return (a, b, c)
@@ -27,7 +27,7 @@ public func denestify<A, B, C>(tuple: (A, (B, C))) -> (A, B, C) {
 
 //===-------------------------------------------------------------------------------------------------------------------===//
 
-// MARK: - 4 Parameters (11 patterns)
+// MARK: - 4 Parameters (10 patterns)
 
 @inlinable @_transparent
 public func denestify<A, B, C, D>(tuple: (((A, B), C), D)) -> (A, B, C, D) {
