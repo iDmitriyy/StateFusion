@@ -125,7 +125,7 @@ internal final class __MPublishedState<StateEntity: Sendable>: @unchecked Sendab
       lock.lock(); defer { lock.unlock() }
 
       var stateAndData = subject.value
-      let result = try withUnsafeMutablePointer(to: &stateAndData) { (pointer) throws(E) -> R in
+      let result = try withUnsafeMutablePointer(to: &stateAndData) { pointer throws(E) -> R in
         try access(pointer)
       }
 

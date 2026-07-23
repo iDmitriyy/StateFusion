@@ -16,7 +16,7 @@
 /// ### UML Mapping
 /// - **EnumerableState**: Represents the discrete, enumerable **State**  of finite State Machine.
 /// - **DataState**: Represents the **Extended State** (additional data that affects or accompanies transitions).
-/// - **RichState**: Represents the **Composite State** or **State Compound**.
+/// - **StateCompound**: Represents the **Composite State**.
 @frozen
 public struct StateCompound<EnumerableState: ~Copyable, DataState: ~Copyable>: ~Copyable {
   /// EnumerableState – the current discrete state machine component.

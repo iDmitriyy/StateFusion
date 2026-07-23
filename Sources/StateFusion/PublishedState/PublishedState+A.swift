@@ -26,7 +26,7 @@ extension PublishedState {
   }
 
   private func withLock_onEvenReduce<R>(_ reduceState: (_ state: borrowing StateEntity) -> EventOutcome<StateEntity, R>) -> R? {
-    withLockMutableAccess {
+    withLockEmittingOnMutableAccess {
       let eventOutcome = reduceState($0.stateEntity)
       switch eventOutcome {
       case let .transition(newState, oldStateAssociatedValue):
@@ -47,9 +47,9 @@ extension PublishedState {
   // FIXME: state.handle { | state.read { — make it impossible to access state inside the access closure
   // If a user accidentally does I/O inside handle { }, the lock stays held for the entire I/O duration.
 
-  public func read<R>(_ closure: (borrowing StateEntity) -> sending R) -> sending R {
-    withLockAccess(closure)
-  }
+//  public func read<R>(_ closure: (borrowing GenericStateAccessHandle<StateEntity>) -> sending R) -> sending R {
+//    withLockAccess(closure)
+//  }
 
   /*
    Ok. How good is my solution dealing with race conditions compared to flux / redux / TCA, and particulary for side effects

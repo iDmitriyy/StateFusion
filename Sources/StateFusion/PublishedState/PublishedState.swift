@@ -5,8 +5,8 @@
 //  Created by Dmitriy Ignatyev on 30.05.2026.
 //
 
-//public import Combine
-//public import class Foundation.NSRecursiveLock
+// public import Combine
+// public import class Foundation.NSRecursiveLock
 
 /// A thread‑safe, non‑copyable reactive state container.
 ///
@@ -70,10 +70,10 @@
 /// and lock. The struct acts as a unique, non-copyable semantic gatekeeper to this shared storage.
 public struct PublishedState<StateEntity: Sendable>: ~Copyable, Sendable {
   @usableFromInline
-  internal let _stateImpObject: _PublishedState<StateEntity>
+  internal let _stateImpObject: InsulatedVersionedValueRelay<StateEntity>
 
   public init(_ initial: consuming StateEntity) {
-    _stateImpObject = _PublishedState(initial)
+    _stateImpObject = InsulatedVersionedValueRelay(initial)
   }
 
   // TODO: - add bag?
@@ -81,7 +81,7 @@ public struct PublishedState<StateEntity: Sendable>: ~Copyable, Sendable {
   deinit {
     // FIXME: - fatal error in runtime in `Relays Init` test
 //    _stateImpObject.finishPublisher()
-//    
+//
 //    Task { [weak _stateImpObject] in
 //      if _stateImpObject != nil {
 //        log(.warning, StateFusionLogEntry(code: .publishedStateRetained,
@@ -111,7 +111,7 @@ extension PublishedState where StateEntity: AnyObject {
 
 extension PublishedState {
   public func asValuePublisher() -> InfallibleValuePublisher<StateEntity> {
-    _stateImpObject.publisher()
+    _stateImpObject.asValuePublisher()
   }
 }
 
@@ -120,29 +120,50 @@ extension PublishedState {
 extension PublishedState {
   // withLockWritebackOnMutation withLockTrackedMutation withLockEmittingChangesOnly
   // withLockEmittingOnMutableAccess withLockEmitOnMutation
-  
-  @inlinable
-  @inline(always)
-  public func withLockAccess<R, E>(_ access: (borrowing StateEntity) throws(E) -> sending R)
-    throws(E) -> sending R {
-    try _stateImpObject.withLockAccess(access)
+
+  // TODO: - write tests that check version in all access patterns
+  // TODO: - ? make `sending R` instead of Sendable
+
+  // Read-Only access
+  public func withLockAccess<R: Sendable, E>(
+    _ access: (borrowing GenericStateAccessHandle<StateEntity>) throws(E) -> R
+  ) throws(E) -> R {
+    try _stateImpObject.withLockEmittingOnMutableAccess { accessHandle throws(E) -> R in
+      try access(accessHandle)
+    }
   }
 
   /// For mutating `StateCompound` use withLockMutableAccessStateCompound
-  @inlinable
-  @inline(always)
-  public func withLockMutableAccess<R>(_ access: (inout GenericStateAccessHandle<StateEntity>) -> sending R)
-    -> sending R {
-    _stateImpObject.withLockMutableAccess(access)
+  public func withLockEmittingOnMutableAccess<R>(
+    _ access: (inout GenericStateAccessHandle<StateEntity>) -> R
+  ) -> R {
+    _stateImpObject.withLockEmittingOnMutableAccess(access)
   }
 
-  @inlinable
-  @inline(always)
-  public func withLockMutableAccessStateCompound<EnumerableState, DataState, R, E>(
-    _ access: (inout StateCompoundAccessHandle<EnumerableState, DataState>) throws(E) -> sending R,
-  ) throws(E) -> sending R
-    where StateEntity == StateCompound<EnumerableState, DataState> {
-    try _stateImpObject.withLockMutableAccessStateCompound(access)
+  public func withLockEmittingOnMutableAccessStateCompound<EnumerableState, DataState, R, E>(
+    _ access: (inout StateCompoundAccessHandle<EnumerableState, DataState>) throws(E) -> R,
+  ) throws(E) -> R where R: Sendable, StateEntity == StateCompound<EnumerableState, DataState> {
+    try _stateImpObject.withLockEmittingOnMutableAccessStateCompound(access)
+  }
+  
+  public func withLockEmittingOnMutableAccessDataState<EnumerableState, DataState, R, E>(
+    _ access: (inout StateCompoundDataPropertyAccessHandle<EnumerableState, DataState>) throws(E) -> R,
+  ) throws(E) -> R where StateEntity == StateCompound<EnumerableState, DataState> {
+    try _stateImpObject.withLockEmittingOnMutableAccessDataState(access)
   }
 }
 
+// MARK: - StateCompound Separate Publishers
+
+extension PublishedState {
+  public func enumerableStatePublisher<EnumerableState, DataState>() -> InfallibleValuePublisher<EnumerableState>
+    where StateEntity == StateCompound<EnumerableState, DataState> {
+    fatalError()
+  }
+
+  // FIXME: - implement
+  public func dataStatePublisher<EnumerableState, DataState>() -> InfallibleValuePublisher<DataState>
+    where StateEntity == StateCompound<EnumerableState, DataState> {
+    fatalError()
+  }
+}

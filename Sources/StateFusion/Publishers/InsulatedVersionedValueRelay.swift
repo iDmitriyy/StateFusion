@@ -149,20 +149,75 @@ extension InsulatedVersionedValueRelay where Value: Sendable {
     }
   }
 
-  public final func withLockEmittingOnMutableAccess<R: Sendable, E: Error>(
+  public final func withLockEmittingOnMutableAccess<R, E: Error>(
     _ access: (inout GenericStateAccessHandle<Value>) throws(E) -> R,
   ) throws(E) -> R {
     try _properties.withLock { properties throws(E) -> R in
       var accessHandle = GenericStateAccessHandle(mutableRef: _MutableRef(&properties.value))
       let result = try access(&accessHandle)
 
-      if accessHandle._isMutablyAccessed, !properties.subscriptions.isEmpty {
-        let snapshot = SequentialSnapshot(value: properties.value, version: properties.version, sourceID: id)
-        properties.subscriptions.forEach { subscription in
-          subscription.receive(snapshot)
+      if accessHandle._isMutablyAccessed {
+        properties.version += 1
+        
+        if !properties.subscriptions.isEmpty {
+          let snapshot = SequentialSnapshot(value: properties.value, version: properties.version, sourceID: id)
+          properties.subscriptions.forEach { subscription in
+            subscription.receive(snapshot)
+          }
         }
       }
 
+      return result
+    }
+  }
+  
+  internal final func withLockEmittingOnMutableAccessStateCompound<EnumerableState, DataState, R, E>(
+    _ access: (inout StateCompoundAccessHandle<EnumerableState, DataState>) throws(E) -> R,
+  ) throws(E) -> R where Value == StateCompound<EnumerableState, DataState> {
+    try _properties.withLock { properties throws(E) -> R in
+      var stateCompound = properties.value
+      var accessHandle = StateCompoundAccessHandle(mutableRef: _MutableRef(&stateCompound))
+      let result = try access(&accessHandle)
+      let emissionReason = accessHandle.finalizeAccess()
+
+      let isMutablyAccessed = emissionReason != nil
+      if isMutablyAccessed {
+        properties.version += 1
+        
+        if !properties.subscriptions.isEmpty {
+          let snapshot = SequentialSnapshot(value: properties.value, version: properties.version, sourceID: id)
+          properties.subscriptions.forEach { subscription in
+            subscription.receive(snapshot)
+          }
+        }
+      }
+
+      return result
+    }
+  }
+  
+  
+  internal final func withLockEmittingOnMutableAccessDataState<EnumerableState, DataState, R, E>(
+    _ access: (inout StateCompoundDataPropertyAccessHandle<EnumerableState, DataState>) throws(E) -> R,
+  ) throws(E) -> R where Value == StateCompound<EnumerableState, DataState> {
+    try _properties.withLock { properties throws(E) -> R in
+      var stateCompound = properties.value
+      var accessHandle = StateCompoundDataPropertyAccessHandle(mutableRef: _MutableRef(&stateCompound))
+      let result = try access(&accessHandle)
+      let emissionReason = accessHandle.finalizeAccess()
+
+      let isMutablyAccessed = emissionReason != nil
+      if isMutablyAccessed {
+        properties.version += 1
+        
+        if !properties.subscriptions.isEmpty {
+          let snapshot = SequentialSnapshot(value: properties.value, version: properties.version, sourceID: id)
+          properties.subscriptions.forEach { subscription in
+            subscription.receive(snapshot)
+          }
+        }
+      }
+      
       return result
     }
   }

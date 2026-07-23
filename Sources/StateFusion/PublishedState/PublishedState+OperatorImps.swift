@@ -28,10 +28,10 @@ extension Publisher where Failure == Never {
   internal func _filterBy<State, EvaluationOutput>(
     state publishedState: borrowing PublishedState<State>,
     evaluate: sending @escaping (_ state: borrowing State) -> sending EventFilteringResult<State, EvaluationOutput>,
-  )
-    -> some Publisher<(Output, EvaluationOutput), Failure> {
+  ) -> some Publisher<(Output, EvaluationOutput), Failure> {
     compactMap { [weak publishedState = publishedState._stateImpObject] element -> (Output, EvaluationOutput)? in
       guard let publishedState else {
+        // FIXME: - assertingLog() instead of assertionFailure()
         assertionFailure(_publishedStateDeallocationAssertMessage(output: Output.self, state: State.self))
         return nil
       }
@@ -62,8 +62,7 @@ extension Publisher where Failure == Never {
     stateAndDataState publishedState: borrowing PublishedState<StateCompound<State, some Any>>,
     output _: EvaluationOutput.Type = EvaluationOutput.self,
     where evaluate: sending @escaping (borrowing State) -> sending EventFilteringResult<State, EvaluationOutput>,
-  )
-    -> AnyPublisher<(Output, EvaluationOutput), Failure> {
+  ) -> AnyPublisher<(Output, EvaluationOutput), Failure> {
     compactMap { [weak publishedState = publishedState._stateImpObject] element -> (Output, EvaluationOutput)? in
       guard let publishedState else {
         assertionFailure(_publishedStateDeallocationAssertMessage(output: Output.self, state: State.self))
@@ -149,8 +148,7 @@ extension Publisher where Failure == Never {
   internal func _handleReducing<State>(
     state publishedState: borrowing PublishedState<State>,
     reduce: sending @escaping (_ state: borrowing State, borrowing Output) -> sending EventReducingResult<State>,
-  )
-    -> AnyCancellable {
+  ) -> AnyCancellable {
     sink(receiveValue: { [weak publishedState = publishedState._stateImpObject] element in
       guard let publishedState else {
         assertionFailure(_publishedStateDeallocationAssertMessage(output: Output.self, state: State.self))
@@ -182,8 +180,7 @@ extension Publisher where Failure == Never {
   internal func _mutate<DataState, MutationOutput>(
     dataState publishedState: borrowing PublishedState<DataState>,
     mutation: sending @escaping (inout GenericStateAccessHandle<DataState>, borrowing Output) -> sending MutationOutput,
-  )
-    -> AnyPublisher<(Output, MutationOutput), Failure> {
+  ) -> AnyPublisher<(Output, MutationOutput), Failure> {
     compactMap { [weak publishedState = publishedState._stateImpObject] element -> (Output, MutationOutput)? in
       guard let publishedState else {
         assertionFailure(_publishedStateDeallocationAssertMessage(output: Output.self, state: DataState.self))
@@ -204,8 +201,7 @@ extension Publisher where Failure == Never {
   internal func _mutateStateAndData<EnumerableState, DataState, MutationOutput>(
     dataState publishedState: borrowing PublishedState<StateCompound<EnumerableState, DataState>>,
     mutation: sending @escaping (inout StateCompoundDataPropertyAccessHandle<EnumerableState, DataState>, borrowing Output) -> sending MutationOutput,
-  )
-    -> AnyPublisher<(Output, MutationOutput), Failure> {
+  ) -> AnyPublisher<(Output, MutationOutput), Failure> {
     compactMap { [weak publishedState = publishedState._stateImpObject] element -> (Output, MutationOutput)? in
       guard let publishedState else {
         assertionFailure(_publishedStateDeallocationAssertMessage(output: Output.self,
@@ -227,8 +223,7 @@ extension Publisher where Failure == Never {
   internal func _mutateStateCompound<EnumerableState, DataState, MutationOutput>(
     stateCompound publishedState: borrowing PublishedState<StateCompound<EnumerableState, DataState>>,
     mutation: sending @escaping (inout StateCompoundAccessHandle<EnumerableState, DataState>, borrowing Output) -> sending MutationOutput,
-  )
-    -> AnyPublisher<(Output, MutationOutput), Failure> {
+  ) -> AnyPublisher<(Output, MutationOutput), Failure> {
     // 1. Only state mutated
     // 2. Only dataState mutated
     // 3. Both mutated
