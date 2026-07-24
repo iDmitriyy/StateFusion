@@ -599,13 +599,14 @@ struct CurrentValuePublisher_AnyObjCast<Output, Failure: Error>: Publisher {
   // Function that can cast to generic type
   @usableFromInline internal let _receiveFunc: (AnyObject, any Subscriber<Output, Failure>) -> Void
 
+  // TODO: - inline might improve it
   // @inline(always) // lead to compiler crash
   init<P: Publisher>(retained_unverifiedValuePublisher publisher: P) where P.Output == Output, P.Failure == Failure {
     let box = PublisherManagedBox(publisher)
     _storage = box
 
     // Create closure without capturing publisher
-    _receiveFunc = { storage, subscriber in
+    _receiveFunc = { storage, subscriber in // in debugger is @convention(thin)
       let castedBox = storage as! PublisherManagedBox<P>
       castedBox.base.receive(subscriber: subscriber)
     }
