@@ -17,7 +17,8 @@ struct ThroughputTests: ~Copyable {
 
   @Test func `Elements Per Second as Publisher`() {
     let currentValueSubject = CurrentValueSubject<Int, Never>(0)
-    let currentValueSubjectErased = CurrentValueSubject<Int, Never>(0)
+    let currentValueSubjectErasedA = CurrentValueSubject<Int, Never>(0) // after operators
+    let currentValueSubjectErasedB = CurrentValueSubject<Int, Never>(0) // before operators
     
     let imp_currentSubj = CurrentValueSubject<Int, Never>(0)
     let imp_current = CurrentValuePublisher(imp_currentSubj)
@@ -44,7 +45,10 @@ struct ThroughputTests: ~Copyable {
       currentValueSubject
         .map { $0 }.map { $0 }.map { $0 }.map { $0 }.map { "\($0)" }.sink { _ in }
       
-      currentValueSubjectErased.eraseToAnyPublisher()
+      currentValueSubjectErasedA
+        .map { $0 }.map { $0 }.map { $0 }.map { $0 }.map { "\($0)" }.eraseToAnyPublisher().sink { _ in }
+      
+      currentValueSubjectErasedB.eraseToAnyPublisher()
         .map { $0 }.map { $0 }.map { $0 }.map { $0 }.map { "\($0)" }.sink { _ in }
       
       imp_current
@@ -62,8 +66,8 @@ struct ThroughputTests: ~Copyable {
       imp_PointerInline
         .map { $0 }.map { $0 }.map { $0 }.map { $0 }.map { "\($0)" }.sink { _ in }
       
-      imp_AnyObjCast.map { $0 }
-        .map { $0 }.map { $0 }.map { $0 }.map { "\($0)" }.sink { _ in }
+      imp_AnyObjCast
+        .map { $0 }.map { $0 }.map { $0 }.map { $0 }.map { "\($0)" }.sink { _ in }
     }
     
     let (_, tCurrentValueSubject) = performMeasuredAction(count: outer) { // reference measurement
@@ -72,9 +76,15 @@ struct ThroughputTests: ~Copyable {
       }
     }
 
-    let (_, tCurrentValueSubjectErased) = performMeasuredAction(count: outer) { // reference measurement
+    let (_, tCurrentValueSubjectErasedA) = performMeasuredAction(count: outer) { // reference measurement
       for i in 0..<inner {
-        currentValueSubjectErased.send(i)
+        currentValueSubjectErasedA.send(i)
+      }
+    }
+    
+    let (_, tCurrentValueSubjectErasedB) = performMeasuredAction(count: outer) { // reference measurement
+      for i in 0..<inner {
+        currentValueSubjectErasedB.send(i)
       }
     }
 
@@ -117,7 +127,8 @@ struct ThroughputTests: ~Copyable {
     let totalIterations = Double(outer * inner)
 
     let thCurrentValueSubject = totalIterations * (1000 / tCurrentValueSubject)
-    let thCurrentValueSubjectErased = totalIterations * (1000 / tCurrentValueSubjectErased)
+    let thCurrentValueSubjectErasedA = totalIterations * (1000 / tCurrentValueSubjectErasedA)
+    let thCurrentValueSubjectErasedB = totalIterations * (1000 / tCurrentValueSubjectErasedB)
 
     let thImp_current = totalIterations * (1000 / tImp_current)
     let thImp_Existential = totalIterations * (1000 / tImp_Existential)
@@ -128,7 +139,8 @@ struct ThroughputTests: ~Copyable {
 
     printTable("Elements Per Second as Publisher",
                rows: [("  CurrentValueSubject time", tCurrentValueSubject),
-                      ("  CurrentValueSubjectErased time", tCurrentValueSubjectErased),
+                      ("  CurrentValueSubjectErasedA time", tCurrentValueSubjectErasedA),
+                      ("  CurrentValueSubjectErasedB time", tCurrentValueSubjectErasedB),
                       ("  Imp_current time", tImp_current),
                       ("  Imp_Existential time", tImp_Existential),
                       ("  Imp_Closure time", tImp_Closure),
@@ -137,7 +149,8 @@ struct ThroughputTests: ~Copyable {
                       ("  Imp_AnyObjCast time", tImp_AnyObjCast),
 
                       ("CurrentValueSubject throughput", thCurrentValueSubject),
-                      ("CurrentValueSubjectErased throughput", thCurrentValueSubjectErased),
+                      ("CurrentValueSubjectErasedA throughput", thCurrentValueSubjectErasedA),
+                      ("CurrentValueSubjectErasedB throughput", thCurrentValueSubjectErasedB),
                       ("Imp_current throughput", thImp_current),
                       ("Imp_Existential throughput", thImp_Existential),
                       ("Imp_Closure throughput", thImp_Closure),

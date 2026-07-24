@@ -14,8 +14,99 @@ struct CreateOperatorsChainTests {
   let outer: Int = 150
   let inner: Int = 1000
 
+  // MARK: - `Type Erasure`
+
+  @Test func `Type Erasure`() {
+    let currentValueSubject = CurrentValueSubject<Int, Never>(0) // .map { $0 }
+    let imp_currentSubj = CurrentValueSubject<Int, Never>(0) // .map { $0 }
+    let imp_ExistentialSubj = CurrentValueSubject<Int, Never>(0) // .map { $0 }
+    let imp_ClosureSubj = CurrentValueSubject<Int, Never>(0) // .map { $0 }
+    let imp_PointerSubj = CurrentValueSubject<Int, Never>(0) // .map { $0 }
+    let imp_PointerInlineSubj = CurrentValueSubject<Int, Never>(0) // .map { $0 }
+    let imp_AnyObjCastSubj = CurrentValueSubject<Int, Never>(0) // .map { $0 }
+    
+    // TODO: - .map { $0 } can be slower than direct subject erasure. May it becuase Map is struct, and sibject is class.
+    // There cases when we want directly erase type of subject or relay.
+    // But performance bottleNeck typically happen in UI, where complex operators chain:
+    // 1. Created
+    // 2. typeErased
+    // 3. subscribed
+    // All of this causes lots of heap allocations.
+    // So performance priority is to fastly typeErase operators chain.
+    
+    let (_, tCurrentValueSubject) = performMeasuredAction(count: outer) { // reference measurement
+      for _ in 0..<inner {
+        blackHole(currentValueSubject.eraseToAnyPublisher())
+      }
+    }
+
+    let (_, tImp_current) = performMeasuredAction(count: outer) {
+      for _ in 0..<inner {
+        // TODO: here used another init, not retained_unverifiedValuePublisher
+        blackHole(CurrentValuePublisher(imp_currentSubj))
+      }
+    }
+
+    let (_, tImp_Existential) = performMeasuredAction(count: outer) {
+      for _ in 0..<inner {
+        blackHole(CurrentValuePublisher_Existential(retained_unverifiedValuePublisher: imp_ExistentialSubj))
+      }
+    }
+
+    let (_, tImp_Closure) = performMeasuredAction(count: outer) {
+      for _ in 0..<inner {
+        blackHole(CurrentValuePublisher_Closure(retained_unverifiedValuePublisher: imp_ClosureSubj))
+      }
+    }
+
+    let (_, tImp_Pointer) = performMeasuredAction(count: outer) {
+      for _ in 0..<inner {
+        blackHole(CurrentValuePublisher_Pointer(retained_unverifiedValuePublisher: imp_PointerSubj))
+      }
+    }
+
+    let (_, tImp_PointerInline) = performMeasuredAction(count: outer) {
+      for _ in 0..<inner {
+        blackHole(CurrentValuePublisher_Inline(retained_unverifiedValuePublisher: imp_PointerInlineSubj))
+      }
+    }
+
+    let (_, tImp_AnyObjCast) = performMeasuredAction(count: outer) {
+      for _ in 0..<inner {
+        blackHole(CurrentValuePublisher_AnyObjCast(retained_unverifiedValuePublisher: imp_AnyObjCastSubj))
+      }
+    }
+
+    let totalIterations = Double(outer * inner)
+
+    let thCurrentValueSubject = totalIterations * (1000 / tCurrentValueSubject)
+    let thImp_current = totalIterations * (1000 / tImp_current)
+    let thImp_Existential = totalIterations * (1000 / tImp_Existential)
+    let thImp_Closure = totalIterations * (1000 / tImp_Closure)
+    let thImp_Pointer = totalIterations * (1000 / tImp_Pointer)
+    let thImp_PointerInline = totalIterations * (1000 / tImp_PointerInline)
+    let thImp_AnyObjCast = totalIterations * (1000 / tImp_AnyObjCast)
+
+    printTable("Erase to AnyPublisher",
+               rows: [("  CurrentValueSubject time", tCurrentValueSubject),
+                      ("  Imp_current time", tImp_current),
+                      ("  Imp_Existential time", tImp_Existential),
+                      ("  Imp_Closure time", tImp_Closure),
+                      ("  Imp_Pointer time", tImp_Pointer),
+                      ("  Imp_PointerInline time", tImp_PointerInline),
+                      ("  Imp_AnyObjCast time", tImp_AnyObjCast),
+
+                      ("CurrentValueSubject throughput", thCurrentValueSubject),
+                      ("Imp_current throughput", thImp_current),
+                      ("Imp_Existential throughput", thImp_Existential),
+                      ("Imp_Closure throughput", thImp_Closure),
+                      ("Imp_Pointer throughput", thImp_Pointer),
+                      ("Imp_PointerInline throughput", thImp_PointerInline),
+                      ("AnyObjCast throughput", thImp_AnyObjCast)])
+  }
+
   // MARK: - `Operators Chain Creation`
-  
+
   /// Measures the performance overhead of creating a chain of Combine operators (e.g. .map)
   /// using three different approaches for a CurrentValuePublisher.
   /// It specifically bench-marks how the internal storage mechanism of each wrapper affects memory
@@ -27,9 +118,9 @@ struct CreateOperatorsChainTests {
     let imp_Closure = CurrentValuePublisher_Closure(CurrentValueSubject<String, Never>(""))
     let imp_Existential = CurrentValuePublisher_Existential(CurrentValueSubject<String, Never>(""))
     let imp_Any = CurrentValuePublisher_Any(CurrentValueSubject<String, Never>(""))
-    
+
     // TODO: - other CurrentValuePublisher imps
-    
+
     let (_, tCurrentValueSubject) = performMeasuredAction(count: outer) { // reference measurement
       for _ in 0..<inner {
         blackHole(currentValueSubject.map { $0 }.map { $0 }.map { $0 }.map { $0 }.map { "\($0)" })
@@ -92,7 +183,7 @@ struct CreateOperatorsChainTests {
   }
 
   // MARK: - `Operators Chain Subscription`
-  
+
   @Test func `Operators Chain Subscription`() {
     let outerLocal: Int = 10
     let total = outerLocal * inner
@@ -182,7 +273,7 @@ struct CreateOperatorsChainTests {
           .store(in: &imp_AnyObjCastCancellables)
       }
     }
-    
+
     let totalIterations = Double(total)
 
     let thCurrentValueSubject = totalIterations * (1000 / tCurrentValueSubject)
@@ -495,7 +586,7 @@ fileprivate final class _PublisherHeapBox<P> {
 internal final class PublisherManagedBox<P: Publisher> {
   @usableFromInline internal let base: P
 
-  @inlinable
+  @usableFromInline
   init(_ base: P) {
     self.base = base
   }
@@ -508,7 +599,7 @@ struct CurrentValuePublisher_AnyObjCast<Output, Failure: Error>: Publisher {
   // Function that can cast to generic type
   @usableFromInline internal let _receiveFunc: (AnyObject, any Subscriber<Output, Failure>) -> Void
 
-//  @inline(always) // lead to compiler crash
+  // @inline(always) // lead to compiler crash
   init<P: Publisher>(retained_unverifiedValuePublisher publisher: P) where P.Output == Output, P.Failure == Failure {
     let box = PublisherManagedBox(publisher)
     _storage = box
