@@ -9,10 +9,13 @@ public import Combine
 import StateFusion
 import Testing
 
+/// See also: `ThroughputTests`
 struct CreateOperatorsChainTests {
   let outer: Int = 150
   let inner: Int = 1000
 
+  // MARK: - `Operators Chain Creation`
+  
   /// Measures the performance overhead of creating a chain of Combine operators (e.g. .map)
   /// using three different approaches for a CurrentValuePublisher.
   /// It specifically bench-marks how the internal storage mechanism of each wrapper affects memory
@@ -24,7 +27,9 @@ struct CreateOperatorsChainTests {
     let imp_Closure = CurrentValuePublisher_Closure(CurrentValueSubject<String, Never>(""))
     let imp_Existential = CurrentValuePublisher_Existential(CurrentValueSubject<String, Never>(""))
     let imp_Any = CurrentValuePublisher_Any(CurrentValueSubject<String, Never>(""))
-
+    
+    // TODO: - other CurrentValuePublisher imps
+    
     let (_, tCurrentValueSubject) = performMeasuredAction(count: outer) { // reference measurement
       for _ in 0..<inner {
         blackHole(currentValueSubject.map { $0 }.map { $0 }.map { $0 }.map { $0 }.map { "\($0)" })
@@ -34,6 +39,7 @@ struct CreateOperatorsChainTests {
     let (_, tCurrentValueSubjectErased) = performMeasuredAction(count: outer) {
       for _ in 0..<inner {
         blackHole(currentValueSubject.map { $0 }.map { $0 }.map { $0 }.map { $0 }.map { "\($0)" }.eraseToAnyPublisher())
+        // TODO: - is it correct to call .eraseToAnyPublisher() here
       }
     }
 
@@ -74,7 +80,7 @@ struct CreateOperatorsChainTests {
       }
     }
 
-    printTable("OperatorsChain Init",
+    printTable("OperatorsChain Init per second",
                rows: [("CurrentValueSubject", tCurrentValueSubject),
                       ("CurrentValueSubjectErased", tCurrentValueSubjectErased),
                       ("imp_current", tImp_current),
@@ -85,8 +91,10 @@ struct CreateOperatorsChainTests {
                       ("imp_Any 2", tImp_Any_2)])
   }
 
+  // MARK: - `Operators Chain Subscription`
+  
   @Test func `Operators Chain Subscription`() {
-    let outerLocal: Int = 5
+    let outerLocal: Int = 10
     let total = outerLocal * inner
 
     let currentValueSubject = CurrentValueSubject<String, Never>("")
@@ -99,6 +107,8 @@ struct CreateOperatorsChainTests {
     let imp_AnyObjCast = CurrentValuePublisher_AnyObjCast(retained_unverifiedValuePublisher: CurrentValueSubject<String, Never>(""))
 
     // TODO: - need to add Map operator for all CurrentValuePublisher types.
+    // + measure map2
+    // TODO: - measure direct subscript without map
 
     var subjectCancellables = Array<AnyCancellable>(minimumCapacity: total)
     let (_, tCurrentValueSubject) = performMeasuredAction(count: outerLocal) { // reference measurement
@@ -115,6 +125,7 @@ struct CreateOperatorsChainTests {
         currentValueSubject.map { $0 }.map { $0 }.map { $0 }.map { $0 }.map { "\($0)" }.eraseToAnyPublisher()
           .sink { _ in }
           .store(in: &subjectErasedCancellables)
+        // TODO: - is there difference to apply .eraseToAnyPublisher() in the end of chain or before it
       }
     }
 
@@ -184,7 +195,7 @@ struct CreateOperatorsChainTests {
     let thImp_PointerInline = totalIterations * (1000 / tImp_PointerInline)
     let thImp_AnyObjCast = totalIterations * (1000 / tImp_AnyObjCast)
 
-    printTable("Elements Per Second as Publisher",
+    printTable("Operators Chain Subscriptions per second",
                rows: [("  CurrentValueSubject time", tCurrentValueSubject),
                       ("  CurrentValueSubjectErased time", tCurrentValueSubjectErased),
                       ("  Imp_current time", tImp_current),

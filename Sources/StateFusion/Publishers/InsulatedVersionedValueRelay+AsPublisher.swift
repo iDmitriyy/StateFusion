@@ -9,6 +9,10 @@ import Combine
 
 // MARK: - As Publisher (read-only interface)
 
+// TODO: - + add `asSubject() -> some Subject<>` func. Currently relays have `send(nextValue:)` – such naming make it explicit
+// that a whole new value send. For mutation of current value there specific access methods.
+// However, it might be useful to treat Relay as `Subject`-protocol instance for generic context.
+
 extension InsulatedVersionedValueRelay {
   /// Creates a publisher that emits the current and future values.
   ///
