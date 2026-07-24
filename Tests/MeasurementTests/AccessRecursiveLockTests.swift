@@ -187,7 +187,7 @@ struct AccessRecursiveLockTests {
           }
         }
       }
-
+      
       let (_, mutableAccessDoWithRefHandle) = performMeasuredAction(count: outer) {
         for _ in 0..<inner {
           obj1.withLockMutableAccess_handle {

@@ -59,3 +59,10 @@ extension Duration {
     return Double(seconds) + Double(attoseconds) * 1e-18
   }
 }
+
+extension Array {
+  init(minimumCapacity: Int) {
+    self.init()
+    self.reserveCapacity(minimumCapacity)
+  }
+}

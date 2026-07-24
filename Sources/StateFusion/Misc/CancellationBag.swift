@@ -125,12 +125,12 @@ import os
 ///   (via reentrancy or races during deinit).
 @_staticExclusiveOnly
 public struct CancellationBag: ~Copyable, Sendable {
-  private let storage: OSAllocatedUnfairLock<Storage>
+  private let _storage: OSAllocatedUnfairLock<Storage>
 
   public init() {
-    storage = OSAllocatedUnfairLock(uncheckedState: Storage())
+    _storage = OSAllocatedUnfairLock(uncheckedState: Storage())
   }
-
+  
   deinit {
     dispose()
   }
@@ -148,7 +148,7 @@ public struct CancellationBag: ~Copyable, Sendable {
   }
 
   private func _dispose() -> (cancellableObjects: OrderedSet<AnyCancellable>, cancellableExistentials: [any Cancellable]) {
-    storage.withLockUnchecked { storage in
+    _storage.withLockUnchecked { storage in
       let disposables = (storage.cancellableObjects, storage.cancellableExistentials)
 
       storage.cancellableObjects.removeAll()
@@ -166,7 +166,7 @@ public struct CancellationBag: ~Copyable, Sendable {
   }
 
   private func _insert(object: AnyCancellable) -> AnyCancellable? {
-    storage.withLockUnchecked { storage in
+    _storage.withLockUnchecked { storage in
       if storage.isDisposed {
         return object
       } else {
@@ -185,7 +185,7 @@ public struct CancellationBag: ~Copyable, Sendable {
   }
 
   private func _insert(existential: any Cancellable) -> (any Cancellable)? {
-    storage.withLockUnchecked { storage in
+    _storage.withLockUnchecked { storage in
       if storage.isDisposed {
         return existential
       } else {
@@ -199,7 +199,7 @@ public struct CancellationBag: ~Copyable, Sendable {
 
   // TODO: - specialize for Array
   public func insert<C: Collection>(_ anyCancellableObjects: C) where C.Element == AnyCancellable {
-    let toCancel = storage.withLockUnchecked { storage -> C? in
+    let toCancel = _storage.withLockUnchecked { storage -> C? in
       if storage.isDisposed {
         return anyCancellableObjects
       } else {
@@ -225,7 +225,7 @@ public struct CancellationBag: ~Copyable, Sendable {
       }
     }
 
-    let toCancelExistentials = storage.withLockUnchecked { storage -> [any Cancellable]? in
+    let toCancelExistentials = _storage.withLockUnchecked { storage -> [any Cancellable]? in
       if storage.isDisposed {
         return cancellableExistentials
       } else {

@@ -8,18 +8,23 @@
 @_spi(PerformanceMeasuring) import StateFusion
 import Testing
 
-
 struct ThroughputTests: ~Copyable {
   let outer: Int = 1000
   let inner: Int = 1000
-  
+
   let bag = CancellationBag()
-  
+
   @Test func `Elements Per Second as Publisher`() {
     let currentValueSubject = CurrentValueSubject<String, Never>("")
-    let currentValuePublisher = CurrentValuePublisher(currentValueSubject)
-    
-    let outerLocal: Int = 10
+    let imp_current = CurrentValuePublisher(currentValueSubject)
+
+    let imp_Existential = CurrentValuePublisher_Existential(retained_unverifiedValuePublisher: currentValueSubject)
+    let imp_Closure = CurrentValuePublisher_Closure(retained_unverifiedValuePublisher: currentValueSubject)
+    let imp_Pointer = CurrentValuePublisher_Pointer(retained_unverifiedValuePublisher: currentValueSubject)
+    let imp_PointerInline = CurrentValuePublisher_Inline(retained_unverifiedValuePublisher: currentValueSubject)
+    let imp_AnyObjCast = CurrentValuePublisher_AnyObjCast(retained_unverifiedValuePublisher: currentValueSubject)
+
+    let outerLocal: Int = 5
     let (_, tCurrentValueSubject) = performMeasuredAction(count: outerLocal) { // reference measurement
       for _ in 0..<inner {
         currentValueSubject.map { $0 }.map { $0 }.map { $0 }.map { $0 }.map { "\($0)" }
@@ -36,29 +41,86 @@ struct ThroughputTests: ~Copyable {
       }
     }
 
-    let (_, tValuePublisher) = performMeasuredAction(count: outerLocal) {
+    let (_, tImp_current) = performMeasuredAction(count: outerLocal) {
       for _ in 0..<inner {
-        currentValuePublisher.map { $0 }.map { $0 }.map { $0 }.map { $0 }.map { "\($0)" }
+        imp_current.map { $0 }.map { $0 }.map { $0 }.map { $0 }.map { "\($0)" }
+          .sink { _ in }
+          .store(in: bag)
+      }
+    }
+
+    let (_, tImp_Existential) = performMeasuredAction(count: outerLocal) {
+      for _ in 0..<inner {
+        imp_Existential.map { $0 }.map { $0 }.map { $0 }.map { $0 }.map { "\($0)" }
+          .sink { _ in }
+          .store(in: bag)
+      }
+    }
+
+    let (_, tImp_Closure) = performMeasuredAction(count: outerLocal) {
+      for _ in 0..<inner {
+        imp_Closure.map { $0 }.map { $0 }.map { $0 }.map { $0 }.map { "\($0)" }
+          .sink { _ in }
+          .store(in: bag)
+      }
+    }
+
+    let (_, tImp_Pointer) = performMeasuredAction(count: outerLocal) {
+      for _ in 0..<inner {
+        imp_Pointer.map { $0 }.map { $0 }.map { $0 }.map { $0 }.map { "\($0)" }
+          .sink { _ in }
+          .store(in: bag)
+      }
+    }
+
+    let (_, tImp_PointerInline) = performMeasuredAction(count: outerLocal) {
+      for _ in 0..<inner {
+        imp_PointerInline.map { $0 }.map { $0 }.map { $0 }.map { $0 }.map { "\($0)" }
           .sink { _ in }
           .store(in: bag)
       }
     }
     
+    let (_, tImp_AnyObjCast) = performMeasuredAction(count: outerLocal) {
+      for _ in 0..<inner {
+        imp_AnyObjCast.map { $0 }.map { $0 }.map { $0 }.map { $0 }.map { "\($0)" }
+          .sink { _ in }
+          .store(in: bag)
+      }
+    }
+
     let totalIterations = Double(outerLocal * inner)
-    
+
     let thCurrentValueSubject = totalIterations * (1000 / tCurrentValueSubject)
     let thCurrentValueSubjectErased = totalIterations * (1000 / tCurrentValueSubjectErased)
-    let thValuePublisher = totalIterations * (1000 / tValuePublisher)
-    
+
+    let thImp_current = totalIterations * (1000 / tImp_current)
+    let thImp_Existential = totalIterations * (1000 / tImp_Existential)
+    let thImp_Closure = totalIterations * (1000 / tImp_Closure)
+    let thImp_Pointer = totalIterations * (1000 / tImp_Pointer)
+    let thImp_PointerInline = totalIterations * (1000 / tImp_PointerInline)
+    let thImp_AnyObjCast = totalIterations * (1000 / tImp_AnyObjCast)
+
     printTable("Elements Per Second as Publisher",
-               rows: [("CurrentValueSubject time", tCurrentValueSubject),
-                      ("CurrentValueSubject throughput", thCurrentValueSubject),
+               rows: [("  CurrentValueSubject time", tCurrentValueSubject),
                       ("  CurrentValueSubjectErased time", tCurrentValueSubjectErased),
-                      ("  CurrentValueSubjectErased throughput", thCurrentValueSubjectErased),
-                      ("ValuePublisher time", tValuePublisher),
-                      ("ValuePublisher throughput", thValuePublisher)])
+                      ("  Imp_current time", tImp_current),
+                      ("  Imp_Existential time", tImp_Existential),
+                      ("  Imp_Closure time", tImp_Closure),
+                      ("  Imp_Pointer time", tImp_Pointer),
+                      ("  Imp_PointerInline time", tImp_PointerInline),
+                      ("  Imp_AnyObjCast time", tImp_AnyObjCast),
+
+                      ("CurrentValueSubject throughput", thCurrentValueSubject),
+                      ("CurrentValueSubjectErased throughput", thCurrentValueSubjectErased),
+                      ("Imp_current throughput", thImp_current),
+                      ("Imp_Existential throughput", thImp_Existential),
+                      ("Imp_Closure throughput", thImp_Closure),
+                      ("Imp_Pointer throughput", thImp_Pointer),
+                      ("Imp_PointerInline throughput", thImp_PointerInline),
+                      ("AnyObjCast throughput", thImp_AnyObjCast)])
   }
-  
+
   /// Measures and compares throughput (elements per second) when sending
   /// values with and without active subscribers.
   ///
@@ -77,18 +139,18 @@ struct ThroughputTests: ~Copyable {
     `Elements Per Second Direct`(withSubscriber: false)
     `Elements Per Second Direct`(withSubscriber: true)
   }
-  
+
   private func `Elements Per Second Direct`(withSubscriber: Bool) {
     let currentValueSubject = CurrentValueSubject<Int, Never>(0)
     let versionedValueRelay = InsulatedVersionedValueRelay<Int>(_value: 0)
-    
+
     if withSubscriber {
       bag.insert {
         currentValueSubject.sink { _ in }
         versionedValueRelay.sink { _ in }
       }
     }
-    
+
     let (_, msCurrentValueSubject) = performMeasuredAction(count: outer) {
       for i in 0..<inner {
         currentValueSubject.send(i)
@@ -100,17 +162,13 @@ struct ThroughputTests: ~Copyable {
         versionedValueRelay.send(nextValue: i)
       }
     }
-    
+
     let totalIterations = Double(outer * inner)
-    
+
     let thCurrentValueSubject = totalIterations * (1000 / msCurrentValueSubject)
     let thVersionedValueRelay = totalIterations * (1000 / msVersionedValueRelay)
-    
-    // CurrentValueSubject  9565905
-    // VersionedValueRelay  187149
 
     printTable("Elements Per Second " + (withSubscriber ? "With Subscriber" : "No Subscriber"),
-               fractionDigits: 0,
                rows: [("CurrentValueSubject", thCurrentValueSubject),
                       ("VersionedValueRelay", thVersionedValueRelay)])
   }
