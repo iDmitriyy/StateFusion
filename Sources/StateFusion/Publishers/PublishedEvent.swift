@@ -19,20 +19,26 @@ public import Combine
 public final class PublishedEvent<Output> {
   public final let wrappedValue: AnyInfalliblePublisher<Output>
 
+  @inlinable @inline(always)
   public final var projectedValue: PublishedEvent<Output> {
     self
   }
 
-  private let _subject = PassthroughSubject<Output, Never>()
+  @usableFromInline
+  internal let _subject = PassthroughSubject<Output, Never>()
 
   public init() {
     wrappedValue = _subject.eraseToAnyPublisher()
   }
   
+  @inlinable @inline(always)
   public final func send(_ input: Output) {
     _subject.send(input)
   }
 }
+
+// TODO: - when is it completed?
+// TODO: - PassthroughRelay | + Result.forward
 
 //@propertyWrapper
 //public final class PublishedValue<Output> {

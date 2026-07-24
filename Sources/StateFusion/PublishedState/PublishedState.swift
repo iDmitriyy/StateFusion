@@ -78,6 +78,7 @@ public struct PublishedState<StateEntity: Sendable>: ~Copyable, Sendable {
 
   // TODO: - add bag?
 
+  // TODO: - how to add $ or _ syntax for mutation? e.g. `state.readonlyFuncs` and `$state.mutationFuncs`
   deinit {
     // FIXME: - fatal error in runtime in `Relays Init` test
 //    _stateImpObject.finishPublisher()

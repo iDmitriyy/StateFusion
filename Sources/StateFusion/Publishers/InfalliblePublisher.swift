@@ -11,6 +11,7 @@ public import Combine
 
 public typealias InfalliblePublisher<Output> = Publisher<Output, Never> // ?? Publisher<Output, Never>
 
+// TODO: - make another erasure type, if there is more performant one
 public typealias AnyInfalliblePublisher<Output> = AnyPublisher<Output, Never>
 
 // Driver:
