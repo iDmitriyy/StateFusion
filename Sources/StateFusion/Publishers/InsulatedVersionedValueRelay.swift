@@ -474,10 +474,11 @@ extension InsulatedVersionedValueRelay {
   #endif
 }
 
-public import struct Darwin.os_unfair_lock_s
+import struct Darwin.os_unfair_lock_s
 
 extension UnsafeMutablePointer<os_unfair_lock_s> {
-  @inlinable @discardableResult
+  @inline(always)
+  @discardableResult
   func sync<R>(_ work: () -> R) -> R {
     os_unfair_lock_lock(self)
     defer { os_unfair_lock_unlock(self) }

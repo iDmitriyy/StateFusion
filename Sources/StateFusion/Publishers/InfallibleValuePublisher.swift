@@ -21,21 +21,18 @@ public typealias InfallibleValuePublisher<Output> = CurrentValuePublisher<Output
 // MARK: - CurrentValuePublisher (Non-Versioned, Generic Failure)
 
 public struct CurrentValuePublisher<Output, Failure: Error>: Publisher {
-  @usableFromInline
-  /* private */ internal let _base: any Publisher<Output, Failure>
+  private let _base: any Publisher<Output, Failure>
 
-  @inlinable
+  // TODO: - ?replace generic param by existential
   internal init<P: Publisher>(retained_unverifiedValuePublisher base: P) where P.Output == Output, P.Failure == Failure {
     _base = base
   }
   
-  @inlinable
   internal init<P: Publisher>(retained_unverifiedValuePublisher base: P,
                               getCurrentValue _: @escaping () -> Output) where P.Output == Output, P.Failure == Failure {
     _base = base
   }
-
-  @inlinable
+  
   public func receive<S: Subscriber>(subscriber: S) where S.Input == Output, S.Failure == Failure {
     _base.receive(subscriber: subscriber)
   }

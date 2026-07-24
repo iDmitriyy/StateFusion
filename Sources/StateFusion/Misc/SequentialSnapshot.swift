@@ -50,7 +50,7 @@ public struct SequentialSnapshot<T> {
   public let value: T
 
   /// A monotonically increasing identifier for this snapshot version.
-  @inlinable @inline(always) // 1.73x performance boost
+  @inlinable @inline(always) // 1.73x performance gain
   public var version: some Comparable { _version }
 
   /// serial number

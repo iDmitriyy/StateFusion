@@ -197,6 +197,7 @@ public struct CancellationBag: ~Copyable, Sendable {
 
   // MARK: - Insert multiple Cancellables
 
+  // TODO: - specialize for Array
   public func insert<C: Collection>(_ anyCancellableObjects: C) where C.Element == AnyCancellable {
     let toCancel = storage.withLockUnchecked { storage -> C? in
       if storage.isDisposed {
